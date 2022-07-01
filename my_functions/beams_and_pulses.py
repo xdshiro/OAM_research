@@ -6,7 +6,7 @@ from scipy.special import assoc_laguerre
 import my_functions.functions_general as fg
 
 
-def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0):
+def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
     """
     Classic LG beam
     :param l: azimuthal index
@@ -23,6 +23,7 @@ def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0):
 
     x = x - x0
     y = y - y0
+    z = z - z0
     zR = k0 * width ** 2
     E = (np.sqrt(np.math.factorial(p) / (np.pi * np.math.factorial(np.abs(l) + p)))
          * fg.rho(x, y) ** np.abs(l) * np.exp(1j * l * fg.phi(x, y))
@@ -34,8 +35,7 @@ def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0):
     return E
 
 
-def trefoil(x, y, z, w, width=1, k0=1, z0=0., aCoeff=None, coeffPrint=False):
-    z = z - z0
+def trefoil(*x, w, width=1, k0=1, aCoeff=None, coeffPrint=False, **kwargs):
     H = 1.0
     if aCoeff is not None:
         aSumSqr = 0.1 * np.sqrt(sum([a ** 2 for a in aCoeff]))
@@ -54,10 +54,26 @@ def trefoil(x, y, z, w, width=1, k0=1, z0=0., aCoeff=None, coeffPrint=False):
         print(f'a00 -> a01 -> a02 ->... -> a0n -> an0:')
         for i, a in enumerate(aCoeff):
             print(f'a{i}: {a:.3f}', end=',\t')
-    field = (aCoeff[0] * LG_simple(x, y, z, l=0, p=0, width=width, k0=k0) +
-             aCoeff[1] * LG_simple(x, y, z, l=0, p=1, width=width, k0=k0) +
-             aCoeff[2] * LG_simple(x, y, z, l=0, p=2, width=width, k0=k0) +
-             aCoeff[3] * LG_simple(x, y, z, l=0, p=3, width=width, k0=k0) +
-             aCoeff[4] * LG_simple(x, y, z, l=3, p=0, width=width, k0=k0)
+    field = (aCoeff[0] * LG_simple(*x, l=0, p=0, width=width, k0=k0, **kwargs) +
+             aCoeff[1] * LG_simple(*x, l=0, p=1, width=width, k0=k0, **kwargs) +
+             aCoeff[2] * LG_simple(*x, l=0, p=2, width=width, k0=k0, **kwargs) +
+             aCoeff[3] * LG_simple(*x, l=0, p=3, width=width, k0=k0, **kwargs) +
+             aCoeff[4] * LG_simple(*x, l=3, p=0, width=width, k0=k0, **kwargs)
              )
+    return field
+
+
+
+
+def field_LG_combination(mesh, coefficients, modes, **kwargs):
+    """
+    creating the field of any combination of LG beams
+    Sum(Cl1p1 * LG_simple(*mesh, l=l1, p=p1, **kwargs))
+    :param mesh: np.meshgrid
+    :param coefficients: [Cl1p1, Cl2p2...] ...
+    :param modes: [(l1,p1), (l2,p2) ...]
+    """
+    field = 0
+    for num, coefficient in enumerate(coefficients):
+        field += coefficient * LG_simple(*mesh, l=modes[num][0], p=modes[num][1], **kwargs)
     return field

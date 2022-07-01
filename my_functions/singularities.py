@@ -205,19 +205,6 @@ def cut_non_oam(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, cir
     return ans, dots
 
 
-def field_LG_combination(mesh, coefficients, modes, **kwargs):
-    """
-    creating the field of any combination of LG beams
-    Sum(Cl1p1 * LG_simple(*mesh, l=l1, p=p1, **kwargs))
-    :param mesh: np.meshgrid
-    :param coefficients: [Cl1p1, Cl2p2...] ...
-    :param modes: [(l1,p1), (l2,p2) ...]
-    """
-    field = 0
-    for num, coefficient in enumerate(coefficients):
-        field += coefficient * bp.LG_simple(*mesh, l=modes[num][0], p=modes[num][1], **kwargs)
-    return field
-
 class Singularities3D:
     """
     Work with singularities of any 3D complex field
@@ -497,7 +484,7 @@ if __name__ == '__main__':
         coeff = [1.715, -5.662, 6.381 * 17 / 16, -2.305, -4.356]
         phase = [0, 0, np.pi / 32 * 0, 0, 0]
         coeff = [a * np.exp(1j * p) for a, p in zip(coeff, phase)]
-        beam = field_LG_combination(xyzMesh, coeff, [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)])
+        beam = bp.field_LG_combination(xyzMesh, coeff, [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)])
         plot_knot_dots(beam, show=True)
 
     timeit.timeit(func_time_main, number=1)

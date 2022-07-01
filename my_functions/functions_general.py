@@ -57,7 +57,7 @@ def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2
 
 
 def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
-                    xMin=None, yMin=None, zMin=None, indexing='ij'):
+                    xMin=None, yMin=None, zMin=None, indexing='ij', **kwargs):
     """
     creating the mesh using np.meshgrid
     :param xMax: [xMin, xMax] are the boundaries for the meshgrid along x
@@ -81,11 +81,11 @@ def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
     xArray = np.linspace(xMin, xMax, xRes)
     yArray = np.linspace(yMin, yMax, yRes)
     zArray = np.linspace(zMin, zMax, zRes)
-    return np.array(np.meshgrid(xArray, yArray, zArray, indexing=indexing))
+    return np.meshgrid(xArray, yArray, zArray, indexing=indexing, **kwargs)
 
 
 def create_mesh_XY(xMax, yMax, xRes=50, yRes=50,
-                   xMin=None, yMin=None, indexing='ij'):
+                   xMin=None, yMin=None, indexing='ij', **kwargs):
     """
     creating the mesh using np.meshgrid
     :param xMax: [xMin, xMax] are the boundaries for the meshgrid along x
@@ -103,10 +103,9 @@ def create_mesh_XY(xMax, yMax, xRes=50, yRes=50,
         yMin = -yMax
     xArray = np.linspace(xMin, xMax, xRes)
     yArray = np.linspace(yMin, yMax, yRes)
-    return np.array(np.meshgrid(xArray, yArray, indexing=indexing))
+    return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)
 
 
-# function interpolate real 2D array of any data into the function(x, y)
 def interpolation_real(field, xArray=None, yArray=None, **kwargs):
     """
     Interpolation of any real 2d matrix into the function
@@ -126,24 +125,9 @@ def interpolation_real(field, xArray=None, yArray=None, **kwargs):
     fArray1D = np.zeros(xResolution * yResolution)
     for i in range(xResolution * yResolution):
         xArrayFull[i] = xArray[i // yResolution]
-        yArrayFull[i] = yArray[i % xResolution]
-        fArray1D[i] = field[i // yResolution, i % xResolution]
+        yArrayFull[i] = yArray[i % yResolution]
+        fArray1D[i] = field[i // yResolution, i % yResolution]
     return CloughTocher2DInterpolator(list(zip(xArrayFull, yArrayFull)), fArray1D, **kwargs)
-
-
-# def interpolation_complex(field, xArray=None, yArray=None):
-#     """
-#     function interpolate complex 2D array of any data into the function(x, y)
-#     :param field: initial complex 2D array
-#     :param xArray: x interval (range)
-#     :param yArray: y interval (range)
-#     :return: Real CloughTocher2DInterpolator, Imag CloughTocher2DInterpolator
-#     """
-#     fieldReal = np.real(field)
-#     fieldImag = np.imag(field)
-#     def ans(x, y):
-#         return interpolation_real(fieldReal, xArray, yArray)(x, y) + 1j * interpolation_real(fieldImag, xArray, yArray)(x, y)
-#     return ans
 
 # function interpolate complex 2D array of any data into the function(x, y)
 def interpolation_complex(field, xArray=None, yArray=None, fill_value=False):
@@ -230,6 +214,16 @@ def integral_number3_OAMpower_FengLiPaper(fieldFunction, rMin, rMax, rResolution
     pL = integrate.simps(np.abs(aRArray) ** 2 * rArray, rArray)  # using interpolation
     return pL
 
+
+
+def arrays_from_mesh(mesh):
+    xList = []
+    for i, m in enumerate(mesh):
+        row = [0] * len(np.shape(m))
+        row[i] = slice(None, None)
+        xList.append(m[tuple(row)])
+    xTuple = tuple(xList)
+    return xTuple
 
 if __name__ == '__main__':
     import my_functions.beams_and_pulses as bp
