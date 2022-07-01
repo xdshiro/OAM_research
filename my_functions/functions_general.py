@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import CloughTocher2DInterpolator
 from scipy import integrate
+import scipy.io as sio
 
 
 def rho(*r):
@@ -229,6 +230,22 @@ def arrays_from_mesh(mesh):
         xList.append(m[tuple(row)])
     xTuple = tuple(xList)
     return xTuple
+
+
+def readingFile(fileName, fieldToRead="p_charges", printV=False):
+    """
+    function read the mat file and conver 1 of its fields into numpy array
+    :param fileName:
+    :param fieldToRead: which field to conver (require the name)
+    :param printV: if you don't know the name, set it True
+    """
+    matFile = sio.loadmat(fileName, appendmat=False)
+    if fieldToRead not in matFile:
+        printV = True
+    if printV:
+        print(matFile)
+        exit()
+    return np.array(matFile[fieldToRead])
 
 
 if __name__ == '__main__':

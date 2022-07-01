@@ -65,7 +65,7 @@ def trefoil(*x, w, width=1, k0=1, aCoeff=None, coeffPrint=False, **kwargs):
 
 
 
-def field_LG_combination(mesh, coefficients, modes, **kwargs):
+def LG_combination(*mesh, coefficients, modes, **kwargs):
     """
     creating the field of any combination of LG beams
     Sum(Cl1p1 * LG_simple(*mesh, l=l1, p=p1, **kwargs))

@@ -219,9 +219,9 @@ class Singularities3D:
         self.dotsXY = None  # singularities from XY planes
         self.dotsAll = None  # singularities from XY+XZ+YZ planes
         self.dotsList = None  # np.array [[x,y,z], [x,y,z], ...] random order
-        self.mesh = None  # np.meshgrid from field_LG_combination
-        self.coefficients = None  # [Cl1p1, Cl2p2...] from field_LG_combination
-        self.modes = None  # [(l1,p1), (l2,p2) ...] from field_LG_combination
+        self.mesh = None  # np.meshgrid from LG_combination
+        self.coefficients = None  # [Cl1p1, Cl2p2...] from LG_combination
+        self.modes = None  # [(l1,p1), (l2,p2) ...] from LG_combination
         # self.fill_dotsDict_from_field3D(_dotsXY=True)
 
     def field_LG_combination(self, mesh, coefficients, modes, **kwargs):
@@ -484,7 +484,7 @@ if __name__ == '__main__':
         coeff = [1.715, -5.662, 6.381 * 17 / 16, -2.305, -4.356]
         phase = [0, 0, np.pi / 32 * 0, 0, 0]
         coeff = [a * np.exp(1j * p) for a, p in zip(coeff, phase)]
-        beam = bp.field_LG_combination(xyzMesh, coeff, [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)])
+        beam = bp.LG_combination(xyzMesh, coeff, [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)])
         plot_knot_dots(beam, show=True)
 
     timeit.timeit(func_time_main, number=1)
