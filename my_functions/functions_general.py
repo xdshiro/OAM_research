@@ -129,6 +129,7 @@ def interpolation_real(field, xArray=None, yArray=None, **kwargs):
         fArray1D[i] = field[i // yResolution, i % yResolution]
     return CloughTocher2DInterpolator(list(zip(xArrayFull, yArrayFull)), fArray1D, **kwargs)
 
+
 # function interpolate complex 2D array of any data into the function(x, y)
 def interpolation_complex(field, xArray=None, yArray=None, fill_value=False):
     """
@@ -171,7 +172,6 @@ def integral_of_function_1D(integrandFunc, x1, x2, epsabs=1.e-5, maxp1=50, limit
     return real_integral[0] + 1j * imag_integral[0], (real_integral[1:], imag_integral[1:])
 
 
-
 def integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, r, l):
     """
     Implementation of the Integral (2) from the FengLi paper for calculating the weight of OAM in r
@@ -179,6 +179,7 @@ def integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, r, l):
     :param r: radius where you want to know OAM
     :param l: exp(1j * j * phi)
     """
+
     # function helps to get y value from x and r. Sign is used in 2 different parts of the CS.
     # helper => it is used only in other functions, you don't use it yourself
     def y_helper(x, sign, r):
@@ -215,8 +216,12 @@ def integral_number3_OAMpower_FengLiPaper(fieldFunction, rMin, rMax, rResolution
     return pL
 
 
-
 def arrays_from_mesh(mesh):
+    """
+    Functions returns the tuple of x1Array, x2Array... of the mesh
+    :param mesh: no-sparse mesh, for 3D: [3][Nx, Ny, Nz]
+    :return: for 3D: xArray, yArray, zArray
+    """
     xList = []
     for i, m in enumerate(mesh):
         row = [0] * len(np.shape(m))
@@ -224,6 +229,7 @@ def arrays_from_mesh(mesh):
         xList.append(m[tuple(row)])
     xTuple = tuple(xList)
     return xTuple
+
 
 if __name__ == '__main__':
     import my_functions.beams_and_pulses as bp
