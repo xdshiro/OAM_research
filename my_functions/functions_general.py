@@ -173,50 +173,6 @@ def integral_of_function_1D(integrandFunc, x1, x2, epsabs=1.e-5, maxp1=50, limit
     return real_integral[0] + 1j * imag_integral[0], (real_integral[1:], imag_integral[1:])
 
 
-def integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, r, l):
-    """
-    Implementation of the Integral (2) from the FengLi paper for calculating the weight of OAM in r
-    :param fieldFunction:
-    :param r: radius where you want to know OAM
-    :param l: exp(1j * j * phi)
-    """
-
-    # function helps to get y value from x and r. Sign is used in 2 different parts of the CS.
-    # helper => it is used only in other functions, you don't use it yourself
-    def y_helper(x, sign, r):
-        return sign * np.sqrt(r ** 2 - x ** 2)
-
-    def f1(x):  # function f in the upper half - plane
-        Y = y_helper(x, +1, r)
-        return fieldFunction(x, Y) * (-1) / Y * np.exp(-1j * l * phi(x, Y)) / np.sqrt(2 * np.pi)
-
-    def f2(x):  # function f in the lower half - plane
-        Y = y_helper(x, -1, r)
-        return fieldFunction(x, Y) * (-1) / Y * np.exp(-1j * l * phi(x, Y)) / np.sqrt(2 * np.pi)
-
-    i1 = integral_of_function_1D(f1, r, -r)  # upper half - plane integration
-    i2 = integral_of_function_1D(f2, -r, r)  # lower half - plane integration
-    answer = i1[0] + i2[0]  # [0] - is the integral value, [1:] - errors value and other stuff, we don't need it
-    return answer
-
-
-def integral_number3_OAMpower_FengLiPaper(fieldFunction, rMin, rMax, rResolution, l):
-    """
-    Implementation of the Integral (3) from the FengLi paper
-    Calculating total power in the OAM with charge l
-    :param fieldFunction: function of the field
-    :param rMin, rMax: boundaries of the integral
-    :param l: OAM
-    :return: Pl
-    """
-    rArray = np.linspace(rMin, rMax, rResolution)
-    aRArray = np.zeros(rResolution, dtype=complex)
-    for i in range(rResolution):
-        aRArray[i] = integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, rArray[i], l)
-    pL = integrate.simps(np.abs(aRArray) ** 2 * rArray, rArray)  # using interpolation
-    return pL
-
-
 def arrays_from_mesh(mesh):
     """
     Functions returns the tuple of x1Array, x2Array... of the mesh
@@ -232,7 +188,7 @@ def arrays_from_mesh(mesh):
     return xTuple
 
 
-def readingFile(fileName, fieldToRead="p_charges", printV=False):
+def reading_file_mat(fileName, fieldToRead="p_charges", printV=False):
     """
     function read the mat file and conver 1 of its fields into numpy array
     :param fileName:
@@ -248,6 +204,22 @@ def readingFile(fileName, fieldToRead="p_charges", printV=False):
     return np.array(matFile[fieldToRead])
 
 
+def random_list(values, diapason, diapason_complex=None):
+    """
+    Function returns values + random * diapason
+    :param values: we are changing this values
+    :param diapason: to a random value from [value - diap, value + diap]
+    :return: new modified values
+    """
+    import random
+    if diapason_complex is not None:
+        answer = [x + random.uniform(-d, +d) + 1j * random.uniform(-dC, +dC) for x, d, dC
+                  in zip(values, diapason, diapason_complex)]
+    else:
+        answer = [x + random.uniform(-d, +d) for x, d in zip(values, diapason)]
+    return answer
+
+
 if __name__ == '__main__':
     import my_functions.beams_and_pulses as bp
     import my_functions.plotings as pl
@@ -260,17 +232,3 @@ if __name__ == '__main__':
     xArray = np.linspace(-xMinMax, xMinMax, xRes)
     yArray = np.linspace(-yMinMax, yMinMax, yRes)
     beamInterpolated = interpolation_complex(beam, xArray, yArray)
-    # beamInterpolated = beamInterpolated[0] + 1j * beamInterpolated[1]
-    # field = beamInterpolated[0] + 1j * beamInterpolated[1]
-
-    # pl.plot_2D(np.abs(beamInterpolated(*xyMesh)))
-    # plt.show()
-    rArray = np.linspace(0.01, 3, 25)
-    aRArray = np.zeros(25, dtype=complex)
-    for i in range(25):
-        aRArray[i] = integral_number2_OAMcoefficients_FengLiPaper(beamInterpolated, rArray[i], 2)
-    print(np.abs(aRArray))
-    plt.plot(rArray, np.abs(aRArray))
-    plt.show()
-    # value = integral_number3_OAMpower_FengLiPaper(beamInterpolated, rMin=0.01, rMax=3, rResolution=25, l=1)
-    # print(value)

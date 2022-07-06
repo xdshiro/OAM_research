@@ -11,6 +11,7 @@ import my_functions.beams_and_pulses as bp
 import my_functions.plotings as pl
 import my_functions.functions_general as fg
 import matplotlib.pyplot as plt
+from scipy import integrate
 
 """
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -37,7 +38,7 @@ def plot_knot_dots(field, bigSingularity=False, axesAll=True,
         dotsOnly = field
     else:
         dotsFull, dotsOnly = cut_non_oam(np.angle(field),
-                                            bigSingularity=bigSingularity, axesAll=axesAll)
+                                         bigSingularity=bigSingularity, axesAll=axesAll)
     dotsPlus = np.array([list(dots) for (dots, OAM) in dotsOnly.items() if OAM == 1])
     dotsMinus = np.array([list(dots) for (dots, OAM) in dotsOnly.items() if OAM == -1])
     fig = plt.figure()
@@ -205,6 +206,50 @@ def cut_non_oam(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, cir
     return ans, dots
 
 
+def integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, r, l):
+    """
+    Implementation of the Integral (2) from the FengLi paper for calculating the weight of OAM in r
+    :param fieldFunction:
+    :param r: radius where you want to know OAM
+    :param l: exp(1j * j * phi)
+    """
+
+    # function helps to get y value from x and r. Sign is used in 2 different parts of the CS.
+    # helper => it is used only in other functions, you don't use it yourself
+    def y_helper(x, sign, r):
+        return sign * np.sqrt(r ** 2 - x ** 2)
+
+    def f1(x):  # function f in the upper half - plane
+        Y = y_helper(x, +1, r)
+        return fieldFunction(x, Y) * (-1) / Y * np.exp(-1j * l * fg.phi(x, Y)) / np.sqrt(2 * np.pi)
+
+    def f2(x):  # function f in the lower half - plane
+        Y = y_helper(x, -1, r)
+        return fieldFunction(x, Y) * (-1) / Y * np.exp(-1j * l * fg.phi(x, Y)) / np.sqrt(2 * np.pi)
+
+    i1 = fg.integral_of_function_1D(f1, r, -r)  # upper half - plane integration
+    i2 = fg.integral_of_function_1D(f2, -r, r)  # lower half - plane integration
+    answer = i1[0] + i2[0]  # [0] - is the integral value, [1:] - errors value and other stuff, we don't need it
+    return answer
+
+
+def integral_number3_OAMpower_FengLiPaper(fieldFunction, rMin, rMax, rResolution, l):
+    """
+    Implementation of the Integral (3) from the FengLi paper
+    Calculating total power in the OAM with charge l
+    :param fieldFunction: function of the field
+    :param rMin, rMax: boundaries of the integral
+    :param l: OAM
+    :return: Pl
+    """
+    rArray = np.linspace(rMin, rMax, rResolution)
+    aRArray = np.zeros(rResolution, dtype=complex)
+    for i in range(rResolution):
+        aRArray[i] = integral_number2_OAMcoefficients_FengLiPaper(fieldFunction, rArray[i], l)
+    pL = integrate.simps(np.abs(aRArray) ** 2 * rArray, rArray)  # using interpolation
+    return pL
+
+
 class Singularities3D:
     """
     Work with singularities of any 3D complex field
@@ -247,7 +292,7 @@ class Singularities3D:
         :return: None
         """
         pl.plot_2D(np.abs(self.field3D[:, :, zPlane]), **kwargs)
-        pl.plot_2D(np.angle(self.field3D[:, :, zPlane]),map='hsv', **kwargs)
+        pl.plot_2D(np.angle(self.field3D[:, :, zPlane]), map='hsv', **kwargs)
         if show:
             plt.show()
 
@@ -474,17 +519,17 @@ if __name__ == '__main__':
 
 
     def func_time_main():
-
         xMinMax = 3
         yMinMax = 3
         zMinMax = 0.8
         zRes = 70
-        xRes = yRes = 70
+        xRes = yRes = 80
         xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
-        coeff = [1.715, -5.662, 6.381 * 17 / 16, -2.305, -4.356]
-        phase = [0, 0, np.pi / 32 * 0, 0, 0]
+        coeff = [1.715, -5.662, 6.381 / 16 * 17, -2.305, -4.356]
+        phase = [0, 0, np.pi / 16 * 0, 0, 0]
         coeff = [a * np.exp(1j * p) for a, p in zip(coeff, phase)]
-        beam = bp.LG_combination(xyzMesh, coeff, [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)])
+        beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=((0, 0), (0, 1), (0, 2), (0, 3), (3, 0)))
         plot_knot_dots(beam, show=True)
+
 
     timeit.timeit(func_time_main, number=1)
