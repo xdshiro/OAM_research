@@ -220,6 +220,59 @@ def random_list(values, diapason, diapason_complex=None):
     return answer
 
 
+def W_energy(EArray, xArray=None, yArray=None):
+    """
+    total power in Oxy plane
+    :param EArray:
+    :param xArray:
+    :param yArray:
+    :return:
+    """
+    if xArray is None or yArray is None:
+        shape = np.shape(EArray)
+        xArray = np.arange(shape[0])
+        yArray = np.arange(shape[1])
+    dx = xArray[1] - xArray[0]
+    dy = yArray[1] - yArray[0]
+    W = np.real(np.sum(np.conj(EArray) * EArray) * dx * dy)
+    return W
+
+
+def Jz_calc_no_conj(EArray, xArray=None, yArray=None):
+    EArray = np.array(EArray)
+    Er, Ei = np.real(EArray), np.imag(EArray)
+    if xArray is None or yArray is None:
+        shape = np.shape(EArray)
+        xArray = np.arange(shape[0])
+        yArray = np.arange(shape[1])
+    x0 = (xArray[-1] + xArray[0]) / 2
+    y0 = (yArray[-1] + yArray[0]) / 2
+    x = np.array(xArray) - x0
+    y = np.array(yArray) - y0
+    dx = xArray[1] - xArray[0]
+    dy = yArray[1] - yArray[0]
+    sumJz = 0
+    for i in range(1, len(xArray) - 1, 1):
+        for j in range(1, len(yArray) - 1, 1):
+            dErx = (Er[i + 1, j] - Er[i - 1, j]) / (2 * dx)
+            dEry = (Er[i, j + 1] - Er[i, j - 1]) / (2 * dy)
+            dEix = (Ei[i + 1, j] - Ei[i - 1, j]) / (2 * dx)
+            dEiy = (Ei[i, j + 1] - Ei[i, j - 1]) / (2 * dy)
+            # dErx = (Er[i + 1, j] - Er[i, j]) / (dx)
+            # dEry = (Er[i, j + 1] - Er[i, j]) / (dy)
+            # dEix = (Ei[i + 1, j] - Ei[i, j]) / (dx * 2)
+            # dEiy = (Ei[i, j + 1] - Ei[i, j]) / (dy)
+            # print(x[i] * Er[i, j] * dEiy, - y[j] * Er[i, j] * dEix, -
+            #           x[i] * Ei[i, j] * dEry, + y[j] * Ei[i, j] * dErx)
+            sumJz += (x[i] * Er[i, j] * dEiy - y[j] * Er[i, j] * dEix -
+                      x[i] * Ei[i, j] * dEry + y[j] * Ei[i, j] * dErx)
+    # Total moment
+    Jz = (sumJz * dx * dy)
+    W = W_energy(EArray)
+    print(f'Total OAM charge = {Jz / W}\tW={W}')
+    return Jz
+
+
 if __name__ == '__main__':
     import my_functions.beams_and_pulses as bp
     import my_functions.plotings as pl
