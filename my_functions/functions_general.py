@@ -38,24 +38,6 @@ def distance_between_points(point1, point2):
     return rho(deltas)
 
 
-def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2, color=None,
-                    viewAngles=(70, 0), **kwargs):
-    """
-    ploting dots using plt.scatter
-    :param ax: if you want multiple plots in one ax
-    :param size: dots size. Use >100 for a better look
-    :param color: color of the dots. Default for a single plot is blue
-    :param viewAngles: (70, 0) (phi, theta)
-    :param kwargs: extra parameters for plt.scatter
-    :return: ax
-    """
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(X, Y, Z, s=size, color=color, **kwargs)  # plot the point (2,3,4) on the figure
-    ax.view_init(*viewAngles)
-    return ax
-
 
 def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
                     xMin=None, yMin=None, zMin=None, indexing='ij', **kwargs):
@@ -162,14 +144,14 @@ def integral_of_function_1D(integrandFunc, x1, x2, epsabs=1.e-5, maxp1=50, limit
     :return: integral value, (real error, imag error)
     """
 
-    def real(x):
+    def real_f(x):
         return np.real(integrandFunc(x))
 
-    def imag(x):
+    def imag_f(x):
         return np.imag(integrandFunc(x))
 
-    real_integral = integrate.quad(real, x1, x2, epsabs=epsabs, maxp1=maxp1, limit=limit, **kwargs)
-    imag_integral = integrate.quad(imag, x1, x2, epsabs=epsabs, maxp1=maxp1, limit=limit, **kwargs)
+    real_integral = integrate.quad(real_f, x1, x2, epsabs=epsabs, maxp1=maxp1, limit=limit, **kwargs)
+    imag_integral = integrate.quad(imag_f, x1, x2, epsabs=epsabs, maxp1=maxp1, limit=limit, **kwargs)
     return real_integral[0] + 1j * imag_integral[0], (real_integral[1:], imag_integral[1:])
 
 
@@ -218,59 +200,6 @@ def random_list(values, diapason, diapason_complex=None):
     else:
         answer = [x + random.uniform(-d, +d) for x, d in zip(values, diapason)]
     return answer
-
-
-def W_energy(EArray, xArray=None, yArray=None):
-    """
-    total power in Oxy plane
-    :param EArray:
-    :param xArray:
-    :param yArray:
-    :return:
-    """
-    if xArray is None or yArray is None:
-        shape = np.shape(EArray)
-        xArray = np.arange(shape[0])
-        yArray = np.arange(shape[1])
-    dx = xArray[1] - xArray[0]
-    dy = yArray[1] - yArray[0]
-    W = np.real(np.sum(np.conj(EArray) * EArray) * dx * dy)
-    return W
-
-
-def Jz_calc_no_conj(EArray, xArray=None, yArray=None):
-    EArray = np.array(EArray)
-    Er, Ei = np.real(EArray), np.imag(EArray)
-    if xArray is None or yArray is None:
-        shape = np.shape(EArray)
-        xArray = np.arange(shape[0])
-        yArray = np.arange(shape[1])
-    x0 = (xArray[-1] + xArray[0]) / 2
-    y0 = (yArray[-1] + yArray[0]) / 2
-    x = np.array(xArray) - x0
-    y = np.array(yArray) - y0
-    dx = xArray[1] - xArray[0]
-    dy = yArray[1] - yArray[0]
-    sumJz = 0
-    for i in range(1, len(xArray) - 1, 1):
-        for j in range(1, len(yArray) - 1, 1):
-            dErx = (Er[i + 1, j] - Er[i - 1, j]) / (2 * dx)
-            dEry = (Er[i, j + 1] - Er[i, j - 1]) / (2 * dy)
-            dEix = (Ei[i + 1, j] - Ei[i - 1, j]) / (2 * dx)
-            dEiy = (Ei[i, j + 1] - Ei[i, j - 1]) / (2 * dy)
-            # dErx = (Er[i + 1, j] - Er[i, j]) / (dx)
-            # dEry = (Er[i, j + 1] - Er[i, j]) / (dy)
-            # dEix = (Ei[i + 1, j] - Ei[i, j]) / (dx * 2)
-            # dEiy = (Ei[i, j + 1] - Ei[i, j]) / (dy)
-            # print(x[i] * Er[i, j] * dEiy, - y[j] * Er[i, j] * dEix, -
-            #           x[i] * Ei[i, j] * dEry, + y[j] * Ei[i, j] * dErx)
-            sumJz += (x[i] * Er[i, j] * dEiy - y[j] * Er[i, j] * dEix -
-                      x[i] * Ei[i, j] * dEry + y[j] * Ei[i, j] * dErx)
-    # Total moment
-    Jz = (sumJz * dx * dy)
-    W = W_energy(EArray)
-    print(f'Total OAM charge = {Jz / W}\tW={W}')
-    return Jz
 
 
 if __name__ == '__main__':

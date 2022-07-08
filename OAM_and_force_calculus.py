@@ -80,6 +80,6 @@ if __name__ == '__main__':
     modes = [(0, 1), (1, 0)]
     coeff = [0, 1]
     beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=modes)
-    print(Jz_calc_no_conj_3D(beam[:, :, zRes // 2]))
+    print(fg.Jz_calc_no_conj(beam[:, :, zRes // 2]))
     pl.plot_2D(np.abs(beam[:, :, zRes // 2]))
     plt.show()
