@@ -10,22 +10,26 @@ xyLabelFontSize = 20
 legendFontSize = 20
 
 
-def plot_2D(E, x=None, y=None, xname='', yname='', map='jet', vmin=None, vmax=None, title='',
+def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vmax=None, title='',
             ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize,
-            axis_equal=False, xlim=None, ylim=None, ax=None,
+            axis_equal=False, xlim=None, ylim=None, ax=None, show=True, ijToXY=True, origin='lower',
             **kwargs):
+    fieldToPlot = field
+    if ijToXY:
+        origin = 'lower'
+        fieldToPlot = np.copy(field).transpose()
     if x is None:
-        x = range(np.shape(E)[0])
+        x = range(np.shape(fieldToPlot)[0])
     if y is None:
-        y = range(np.shape(E)[1])
+        y = range(np.shape(fieldToPlot)[1])
     if ax is None:
         if axis_equal:
             fig, ax = plt.subplots(figsize=(6, 6))
         else:
             fig, ax = plt.subplots(figsize=(8, 6))
-    image = plt.imshow(E,
+    image = plt.imshow(fieldToPlot,
                        interpolation='bilinear', cmap=map,
-                       origin='lower', aspect='auto',  # aspect ration of the axes
+                       origin=origin, aspect='auto',  # aspect ration of the axes
                        extent=[y[0], y[-1], x[0], x[-1]],
                        vmin=vmin, vmax=vmax, label='sdfsd', **kwargs)
     cbr = plt.colorbar(image, shrink=0.8, pad=0.02, fraction=0.1)
@@ -42,6 +46,8 @@ def plot_2D(E, x=None, y=None, xname='', yname='', map='jet', vmin=None, vmax=No
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     plt.tight_layout()
+    if show:
+        plt.show()
     return ax
 
 
