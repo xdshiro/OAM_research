@@ -104,7 +104,7 @@ def plot_3D_density(E, resDecrease=(1, 1, 1),
 
 
 def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2, color=None,
-                    viewAngles=(70, 0), **kwargs):
+                    viewAngles=(70, 0), show=True,**kwargs):
     """
     ploting dots using plt.scatter
     :param ax: if you want multiple plots in one ax
@@ -119,4 +119,6 @@ def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2
         ax = fig.add_subplot(111, projection='3d')
     ax.scatter(X, Y, Z, s=size, color=color, **kwargs)  # plot the point (2,3,4) on the figure
     ax.view_init(*viewAngles)
+    if show:
+        plt.show()
     return ax

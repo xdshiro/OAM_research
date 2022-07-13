@@ -8,8 +8,8 @@ if __name__ == '__main__':
     xMinMax = 4
     yMinMax = 4
     zMinMax = 1
-    zRes = 60
-    xRes = yRes = 60
+    zRes = 250
+    xRes = yRes = 250
     xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
     # modes = [(0, 0), (0, 1), (0, 2), (1, 0), (2, 0), (2, 1), (2, 2)]
     # modes = [(0, 0), (0, 1), (1, 0), (1, 1)]

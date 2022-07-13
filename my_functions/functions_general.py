@@ -38,9 +38,8 @@ def distance_between_points(point1, point2):
     return rho(deltas)
 
 
-
 def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
-                    xMin=None, yMin=None, zMin=None, indexing='ij', **kwargs):
+                    xMin=None, yMin=None, zMin=None, indexing='ij', random=(None, None, None), **kwargs):
     """
     creating the mesh using np.meshgrid
     :param xMax: [xMin, xMax] are the boundaries for the meshgrid along x
@@ -61,9 +60,22 @@ def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
         yMin = -yMax
     if zMin is None:
         zMin = -zMax
-    xArray = np.linspace(xMin, xMax, xRes)
-    yArray = np.linspace(yMin, yMax, yRes)
-    zArray = np.linspace(zMin, zMax, zRes)
+    if random[0] is None:
+        xArray = np.linspace(xMin, xMax, xRes)
+    else:
+        xArray = np.sort((xMax + xMin) / 2 + (np.random.rand(xRes) - 0.5) * (xMax - xMin))
+        # xArray = ((xMax + xMin) / 2 + (np.random.rand(xRes) - 0.5) * (xMax - xMin))
+
+    if random[1] is None:
+        yArray = np.linspace(yMin, yMax, yRes)
+    else:
+        yArray = np.sort((yMax + yMin) / 2 + (np.random.rand(yRes) - 0.5) * (yMax - yMin))
+        # yArray = ((yMax + yMin) / 2 + (np.random.rand(yRes) - 0.5) * (yMax - yMin))
+    if random[2] is None:
+        zArray = np.linspace(zMin, zMax, zRes)
+    else:
+        zArray = np.sort((zMax + zMin) / 2 + (np.random.rand(zRes) - 0.5) * (zMax - zMin))
+        # zArray = ((zMax + zMin) / 2 + (np.random.rand(zRes) - 0.5) * (zMax - zMin))
     return np.meshgrid(xArray, yArray, zArray, indexing=indexing, **kwargs)
 
 
@@ -155,17 +167,33 @@ def integral_of_function_1D(integrandFunc, x1, x2, epsabs=1.e-5, maxp1=50, limit
     return real_integral[0] + 1j * imag_integral[0], (real_integral[1:], imag_integral[1:])
 
 
-def arrays_from_mesh(mesh):
+def arrays_from_mesh(mesh, indexing='ij'):
     """
     Functions returns the tuple of x1Array, x2Array... of the mesh
     :param mesh: no-sparse mesh, for 3D: [3][Nx, Ny, Nz]
     :return: for 3D: xArray, yArray, zArray
     """
     xList = []
-    for i, m in enumerate(mesh):
-        row = [0] * len(np.shape(m))
-        row[i] = slice(None, None)
-        xList.append(m[tuple(row)])
+    if indexing == 'ij':
+        for i, m in enumerate(mesh):
+            row = [0] * len(np.shape(m))
+            row[i] = slice(None, None)
+            xList.append(m[tuple(row)])
+    else:
+        if len(np.shape(mesh[0])) == 2:
+            for i, m in enumerate(mesh):
+                row = [0] * len(np.shape(m))
+                row[len(np.shape(m)) - 1 - i] = slice(None, None)
+                xList.append(m[tuple(row)])
+        elif len(np.shape(mesh[0])) == 3:
+            indexing = [1, 0, 2]
+            for i, m in enumerate(mesh):
+                row = [0] * len(np.shape(m))
+                row[indexing[i]] = slice(None, None)
+                xList.append(m[tuple(row)])
+        else:
+            print("'xy' cannot be recreated for 4+ dimensions")
+
     xTuple = tuple(xList)
     return xTuple
 
