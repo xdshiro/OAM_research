@@ -44,12 +44,12 @@ def plot_knot_dots(field, bigSingularity=False, axesAll=True,
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     if len(np.shape(dotsPlus)) == 2:
-        fg.plot_scatter_3D(dotsPlus[:, 0], dotsPlus[:, 1], dotsPlus[:, 2], ax=ax, size=size, color=color)
+        pl.plot_scatter_3D(dotsPlus[:, 0], dotsPlus[:, 1], dotsPlus[:, 2], ax=ax, size=size, color=color)
         if len(np.shape(dotsMinus)) == 2:
-            fg.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
+            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
     else:
         if len(np.shape(dotsPlus)) == 2:
-            fg.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
+            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
         else:
             print(f'no singularities to plot')
     if show:
