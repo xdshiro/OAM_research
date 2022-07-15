@@ -4,6 +4,7 @@ Including all the ploting functions, 2D, 3D, dots
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+
 # standard values for fonts
 ticksFontSize = 18
 xyLabelFontSize = 20
@@ -53,9 +54,9 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
 
 def plot_3D_density(E, resDecrease=(1, 1, 1),
                     xMinMax=None, yMinMax=None, zMinMax=None,
-                    surface_count=20,
-                    opacity=0.5, colorscale = 'RdBu',
-                    opacityscale=None, **kwargs):
+                    surface_count=20, show=True,
+                    opacity=0.5, colorscale='RdBu',
+                    opacityscale=None, fig=None, name='', **kwargs):
     """
     Function plots 3d density in the browser
     :param E: anything in real number to plot
@@ -85,7 +86,9 @@ def plot_3D_density(E, resDecrease=(1, 1, 1),
               yMinMax[0]:yMinMax[1]:shape[1] * 1j,
               zMinMax[0]:zMinMax[1]:shape[2] * 1j
               ]
-    fig = go.Figure(data=go.Volume(
+    if fig is None:
+        fig = go.Figure()
+    fig.add_trace(go.Volume(
         x=X.flatten(),  # collapsed into 1 dimension
         y=Y.flatten(),
         z=Z.flatten(),
@@ -98,13 +101,13 @@ def plot_3D_density(E, resDecrease=(1, 1, 1),
         colorscale=colorscale,
         **kwargs
     ))
-    fig.show()
-
-
+    if show:
+        fig.show()
+    return fig
 
 
 def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2, color=None,
-                    viewAngles=(70, 0), show=True,**kwargs):
+                    viewAngles=(70, 0), show=True, **kwargs):
     """
     ploting dots using plt.scatter
     :param ax: if you want multiple plots in one ax
