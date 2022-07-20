@@ -206,6 +206,20 @@ def cut_non_oam(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, cir
     return ans, dots
 
 
+def get_singularities(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, circle=1,
+                      singularities_finder=plane_singularities_finder_4dots):
+    """
+    cut_non_oam simplifier. Just return the array of singularities
+    """
+    if isinstance(E, dict):
+        dotsOnly = E
+    else:
+        dotsFull, dotsOnly = cut_non_oam(E, value, nonValue, bigSingularity, axesAll, circle,
+                                         singularities_finder)
+    dots = np.array([list(dots) for (dots, OAM) in dotsOnly.items()])
+    return dots
+
+
 def W_energy(EArray, xArray=None, yArray=None):
     """
     total power in Oxy plane
@@ -578,11 +592,48 @@ if __name__ == '__main__':
         zRes = 70
         xRes = yRes = 80
         xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
-        coeff = [1.715, -5.662, 6.381 / 16 * 17, -2.305, -4.356]
-        phase = [0, 0, np.pi / 16 * 0, 0, 0]
+        coeff = [1.715, -5.662, 6.381, -2.305, -4.356]
+        phase = [0, 0, 0, 0, 0]
         coeff = [a * np.exp(1j * p) for a, p in zip(coeff, phase)]
         beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=((0, 0), (0, 1), (0, 2), (0, 3), (3, 0)))
-        plot_knot_dots(beam, show=True)
+        # dots = get_singularities(np.angle(beam), bigSingularity=False, axesAll=False)
+        # pl.plot_2D(np.abs(beam[:,:, zRes//2]))
+        dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                          'Experimental Data\\dots\\trefoil\\Field SR = 0.95\\3foil_turb_25.npy',
+                          allow_pickle=True).item()
+        dots = get_singularities(dotsExp)
+        # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+        distance_matrix = euclidean_distance_matrix(dots, dots)
+        minSum = 0
+        checkValue = 3
+        checkNumber = 3
+        indStay = []
+        for i, line in enumerate(distance_matrix):
+            value = line[line > 0].min()
+            minSum += value
+            lineSorted = np.sort(line)
+            if lineSorted[checkNumber] < checkValue:
+                indStay.append(i)
+            # print(i, value)
+        # print(indStay, print(len(indStay)))
+        # print(minSum / np.shape(distance_matrix)[0])
+        newDots = dots[indStay]
+        pl.plot_scatter_3D(newDots[:, 0], newDots[:, 1], newDots[:, 2])
+        for i, line in enumerate(distance_matrix):
+            value = line[line > 0].min()
+            minSum += value
+            if value < checkValue:
+                indStay.append(i)
+            print(i, value)
+        exit()
+        permutation, distance = solve_tsp_local_search(distance_matrix)
+        print(permutation[:10])
+        print(distance[:10])
+        # print(dots[permutation])
+        # print(permutation)
+        dotsKnotList = dots[permutation]
+        exit()
+        # plot_knot_dots(beam, show=True)
 
 
     timeit.timeit(func_time_main, number=1)

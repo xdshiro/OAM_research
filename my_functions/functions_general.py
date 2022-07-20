@@ -38,7 +38,7 @@ def distance_between_points(point1, point2):
     return rho(deltas)
 
 
-def create_mesh_XYZ(xMax, yMax, zMax, xRes=50, yRes=50, zRes=50,
+def create_mesh_XYZ(xMax, yMax, zMax, xRes=40, yRes=40, zRes=40,
                     xMin=None, yMin=None, zMin=None, indexing='ij', random=(None, None, None), **kwargs):
     """
     creating the mesh using np.meshgrid
@@ -213,6 +213,18 @@ def reading_file_mat(fileName, fieldToRead="p_charges", printV=False):
         exit()
     return np.array(matFile[fieldToRead])
 
+
+
+
+def dots3D_rescale(dots, mesh):
+    """
+    rescale dots from [3, 5, 7] into [x[3], y[5], z[7]]
+    :param dots: [[nx,ny,nz]...]
+    :return: [[x,y,z]...]
+    """
+    xyz = arrays_from_mesh(mesh)
+    dotsScaled = [[xyz[0][x], xyz[1][y], xyz[2][z]] for x, y, z in dots]
+    return np.array(dotsScaled)
 
 def random_list(values, diapason, diapason_complex=None):
     """

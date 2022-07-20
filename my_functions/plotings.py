@@ -52,11 +52,18 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     return ax
 
 
-def plot_3D_density(E, resDecrease=(1, 1, 1),
+def plot_3D_dots_go(dots, mode='markers', marker=None):
+    if marker is None:
+        marker = dict(color='rgb(0,0,0)')
+    return go.Scatter3d(x=dots[:, 0], y=dots[:, 1], z=dots[:, 2],
+                 mode=mode, marker=marker)
+
+
+def plot_3D_density(E, resDecrease=(1, 1, 1), mesh=None,
                     xMinMax=None, yMinMax=None, zMinMax=None,
                     surface_count=20, show=True,
                     opacity=0.5, colorscale='RdBu',
-                    opacityscale=None, fig=None, name='', **kwargs):
+                    opacityscale=None, fig=None, **kwargs):
     """
     Function plots 3d density in the browser
     :param E: anything in real number to plot
@@ -71,21 +78,25 @@ def plot_3D_density(E, resDecrease=(1, 1, 1),
     :param kwargs: extra params for go.Figure
     :return: nothing since it's in the browser (not ax or fig)
     """
-    if zMinMax is None:
-        zMinMax = [0, 1]
-    if yMinMax is None:
-        yMinMax = [0, 1]
-    if xMinMax is None:
-        xMinMax = [0, 1]
+    if mesh is None:
+        shape = np.array(np.shape(E))
+        if resDecrease is not None:
+            shape = (shape // resDecrease)
+        if zMinMax is None:
+            zMinMax = [0, shape[0]]
+        if yMinMax is None:
+            yMinMax = [0, shape[1]]
+        if xMinMax is None:
+            xMinMax = [0, shape[2]]
+
+        X, Y, Z = np.mgrid[
+                  xMinMax[0]:xMinMax[1]:shape[0] * 1j,
+                  yMinMax[0]:yMinMax[1]:shape[1] * 1j,
+                  zMinMax[0]:zMinMax[1]:shape[2] * 1j
+                  ]
+    else:
+        X, Y, Z = mesh
     values = E[::resDecrease[0], ::resDecrease[1], ::resDecrease[2]]
-    shape = np.array(np.shape(E))
-    if resDecrease is not None:
-        shape = (shape // resDecrease)
-    X, Y, Z = np.mgrid[
-              xMinMax[0]:xMinMax[1]:shape[0] * 1j,
-              yMinMax[0]:yMinMax[1]:shape[1] * 1j,
-              zMinMax[0]:zMinMax[1]:shape[2] * 1j
-              ]
     if fig is None:
         fig = go.Figure()
     fig.add_trace(go.Volume(

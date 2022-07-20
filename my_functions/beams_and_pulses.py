@@ -63,9 +63,17 @@ def trefoil(*x, w, width=1, k0=1, aCoeff=None, coeffPrint=False, **kwargs):
     return field
 
 
+def milnor_Pol_u_v_any(mesh, uOrder, vOrder, H=1):
+    """This function create u^a-v^b Milnor polynomial"""
+    x, y, z = mesh
+    R = fg.rho(x, y)
+    f = fg.phi(x, y)
+    u = (-H ** 2 + R ** 2 + 2j * z * H + z ** 2) / (H ** 2 + R ** 2 + z ** 2)
+    v = (2 * R * H * np.exp(1j * f)) / (H ** 2 + R ** 2 + z ** 2)
+    return u ** uOrder - v ** vOrder
 
 
-def LG_combination(*mesh, coefficients, modes, **kwargs):
+def LG_combination(*mesh, coefficients, modes, width=1, **kwargs):
     """
     creating the field of any combination of LG beams
     Sum(Cl1p1 * LG_simple(*mesh, l=l1, p=p1, **kwargs))
@@ -74,6 +82,14 @@ def LG_combination(*mesh, coefficients, modes, **kwargs):
     :param modes: [(l1,p1), (l2,p2) ...]
     """
     field = 0
+    if isinstance(width, int):
+        width = [width] * len(modes)
     for num, coefficient in enumerate(coefficients):
-        field += coefficient * LG_simple(*mesh, l=modes[num][0], p=modes[num][1], **kwargs)
+        field += coefficient * LG_simple(*mesh, l=modes[num][0], p=modes[num][1], width=width[num], **kwargs)
     return field
+
+if __name__ == '__main__':
+    import my_functions.plotings as pl
+    xyzMesh = fg.create_mesh_XYZ(4, 4, 1, zMin=None)
+    beam = milnor_Pol_u_v_any(xyzMesh, uOrder=2, vOrder=2, H=1)
+    pl.plot_2D(np.abs(beam[:, :, 20]))

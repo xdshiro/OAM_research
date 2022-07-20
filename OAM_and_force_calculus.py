@@ -74,8 +74,7 @@ def plot_3D_cones(data, mesh, colorscale='Blues', indexing='ij',
         scene=dict(domain_x=[0, 1],
                    camera_eye=dict(x=-1.57, y=1.36, z=0.58)))
 
-    fig.show()
-
+    return fig
 
 def W_energy_3D(EArray, xArray=None, yArray=None):
     """
@@ -267,7 +266,11 @@ if __name__ == '__main__':
     # force = _transposition_ij_xy(force)
     # xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing='xy')
     # pl.plot_2D(abs(beam[:, :, zRes // 2]), show=True)
-    plot_3D_cones(force, xyzMesh, sizeref=25, filterValue=0.1, colorscale='jet', power=2, random=0.002)
+    fig = plot_3D_cones(force, xyzMesh, sizeref=25, filterValue=0.1, colorscale='jet', power=2, random=0.002)
+    dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
+    dots = fg.dots3D_rescale(dots, xyzMesh)
+    fig.add_trace(pl.plot_3D_dots_go(dots))
+    fig.show()
     # plot_vector_field_2D(force[0][:, :, zRes // 2], force[1][:, :, zRes // 2], lw=2,
     #                      indexing=indexing, density=2, show=True, color=None, cmap='jet')
     # plot_vector_field_2D(force[0][:, :, zRes // 2], force[1][:, :, zRes // 2],
