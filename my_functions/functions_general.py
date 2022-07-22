@@ -214,8 +214,6 @@ def reading_file_mat(fileName, fieldToRead="p_charges", printV=False):
     return np.array(matFile[fieldToRead])
 
 
-
-
 def dots3D_rescale(dots, mesh):
     """
     rescale dots from [3, 5, 7] into [x[3], y[5], z[7]]
@@ -225,6 +223,7 @@ def dots3D_rescale(dots, mesh):
     xyz = arrays_from_mesh(mesh)
     dotsScaled = [[xyz[0][x], xyz[1][y], xyz[2][z]] for x, y, z in dots]
     return np.array(dotsScaled)
+
 
 def random_list(values, diapason, diapason_complex=None):
     """
@@ -240,6 +239,90 @@ def random_list(values, diapason, diapason_complex=None):
     else:
         answer = [x + random.uniform(-d, +d) for x, d in zip(values, diapason)]
     return answer
+
+
+
+
+
+##############################################
+
+
+
+def propagator_split_step_3D(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, k0=1):
+    if xArray is None:
+        xArray = np.array(range(np.shape(E)[0]))
+    if yArray is None:
+        yArray = np.array(range(np.shape(E)[1]))
+    xResolution, yResolution = len(xArray), len(yArray)
+    zResolution = zSteps + 1
+    intervalX = xArray[-1] - xArray[0]
+    intervalY = yArray[-1] - yArray[0]
+
+    # xyMesh = np.array(np.meshgrid(xArray, yArray, indexing='ij'))
+    if xResolution // 2 == 1:
+        kxArray = np.linspace(-1. * np.pi * (xResolution - 2) / intervalX,
+                              1. * np.pi * (xResolution - 2) / intervalX, xResolution)
+        kyArray = np.linspace(-1. * np.pi * (yResolution - 2) / intervalY,
+                              1. * np.pi * (yResolution - 2) / intervalY, yResolution)
+    else:
+        kxArray = np.linspace(-1. * np.pi * (xResolution - 0) / intervalX,
+                              1. * np.pi * (xResolution - 2) / intervalX, xResolution)
+        kyArray = np.linspace(-1. * np.pi * (yResolution - 0) / intervalY,
+                              1. * np.pi * (yResolution - 2) / intervalY, yResolution)
+
+    KxyMesh = np.array(np.meshgrid(kxArray, kyArray, indexing='ij'))
+
+    def nonlinearity_spec(E):
+        return dz * 0
+
+    # works fine!
+    def linear_step(field):
+        temporaryField = np.fft.fftshift(np.fft.fftn(field))
+        temporaryField = (temporaryField *
+                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[0] ** 2) *
+                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[1] ** 2))  # something here in /2
+        return np.fft.ifftn(np.fft.ifftshift(temporaryField))
+
+    fieldReturn = np.zeros((xResolution, yResolution, zResolution), dtype=complex)
+    fieldReturn[:, :, 0] = E
+    for k in range(1, zResolution):
+        fieldReturn[:, :, k] = linear_step(fieldReturn[:, :, k - 1])
+        fieldReturn[:, :, k] = fieldReturn[:, :, k] * np.exp(nonlinearity_spec(fieldReturn[:, :, k]))
+
+    return fieldReturn
+
+def one_plane_propagator(fieldPlane, dz, stepsNumber, n0=1, k0=1):  # , shapeWrong=False
+    # if shapeWrong is not False:
+    #     if shapeWrong is True:
+    #         print(f'using the middle plane in one_plane_propagator (shapeWrong = True)')
+    #         fieldPlane = fieldPlane[:, :, np.shape(fieldPlane)[2] // 2]
+    #     else:
+    #         fieldPlane = fieldPlane[:, :, np.shape(fieldPlane)[2] // 2 + shapeWrong]
+    fieldPropMinus = propagator_split_step_3D(fieldPlane, dz=-dz, zSteps=stepsNumber, n0=n0, k0=k0)
+
+    fieldPropPLus = propagator_split_step_3D(fieldPlane, dz=dz, zSteps=stepsNumber, n0=n0, k0=k0)
+    fieldPropTotal = np.concatenate((np.flip(fieldPropMinus, axis=2), fieldPropPLus[:, :, 1:-1]), axis=2)
+    return fieldPropTotal
+
+
+def cut_filter(E, radiusPix=1, circle=True, phaseOnly=False):
+    ans = np.copy(E)
+    xCenter, yCenter = np.shape(ans)[0] // 2, np.shape(ans)[0] // 2
+    if circle:
+        for i in range(np.shape(ans)[0]):
+            for j in range(np.shape(ans)[1]):
+                if np.sqrt((xCenter - i) ** 2 + (yCenter - j) ** 2) > radiusPix:
+                    ans[i, j] = 0
+    else:
+        if phaseOnly:
+            zeros = np.abs(np.copy(ans))
+            zeros = zeros.astype(complex, copy=False)
+        else:
+            zeros = np.zeros(np.shape(ans), dtype=complex)
+        zeros[xCenter - radiusPix:xCenter + radiusPix + 1, yCenter - radiusPix:yCenter + radiusPix + 1] \
+            = ans[xCenter - radiusPix:xCenter + radiusPix + 1, yCenter - radiusPix:yCenter + radiusPix + 1]
+        ans = zeros
+    return ans
 
 
 if __name__ == '__main__':

@@ -234,9 +234,9 @@ if __name__ == '__main__':
     xMinMax = 3.5
     yMinMax = 3.5
     zMinMax = 0.5
-    zRes = 200  # 250
-    xRes = 200
-    yRes = 200
+    zRes = 140  # 250
+    xRes = 140
+    yRes = 140
 
     indexing = 'ij'
     xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing=indexing)
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     # force = _transposition_ij_xy(force)
     # xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing='xy')
     # pl.plot_2D(abs(beam[:, :, zRes // 2]), show=True)
-    fig = plot_3D_cones(force, xyzMesh, sizeref=25, filterValue=0.1, colorscale='jet', power=2, random=0.002)
+    fig = plot_3D_cones(force, xyzMesh, sizeref=14, filterValue=0.1, colorscale='jet', power=2, random=0.002)
     dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
     dots = fg.dots3D_rescale(dots, xyzMesh)
     fig.add_trace(pl.plot_3D_dots_go(dots))
