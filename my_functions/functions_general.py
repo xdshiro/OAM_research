@@ -35,7 +35,7 @@ def distance_between_points(point1, point2):
     :return: geometrical distance
     """
     deltas = np.array(point1) - np.array(point2)
-    return rho(deltas)
+    return rho(*deltas)
 
 
 def create_mesh_XYZ(xMax, yMax, zMax, xRes=40, yRes=40, zRes=40,

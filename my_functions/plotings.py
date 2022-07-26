@@ -52,11 +52,22 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     return ax
 
 
-def plot_3D_dots_go(dots, mode='markers', marker=None):
+def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False):
+    """
+    plotting dots in the interactive window in browser using plotly.graph_objects
+    :param dots: [[x,y,z],...]
+    :param show: True if you want to show it instantly
+    :return: fig
+    """
     if marker is None:
         marker = dict(color='rgb(0,0,0)')
-    return go.Scatter3d(x=dots[:, 0], y=dots[:, 1], z=dots[:, 2],
-                 mode=mode, marker=marker)
+    if fig is None:
+        fig = go.Figure()
+    fig.add_trace(go.Scatter3d(x=dots[:, 0], y=dots[:, 1], z=dots[:, 2],
+                               mode=mode, marker=marker))
+    if show:
+        fig.show()
+    return fig
 
 
 def plot_3D_density(E, resDecrease=(1, 1, 1), mesh=None,

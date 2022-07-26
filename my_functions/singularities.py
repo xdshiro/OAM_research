@@ -12,7 +12,10 @@ import my_functions.plotings as pl
 import my_functions.functions_general as fg
 import matplotlib.pyplot as plt
 from scipy import integrate
-
+import timeit
+import sympy
+from python_tsp.distances import euclidean_distance_matrix
+from python_tsp.heuristics import solve_tsp_local_search
 """
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 We can make a graph for tsp, so it is not searching for all the dots, only close z
@@ -24,7 +27,7 @@ Stop if the distance is too big. To find a hopf
 
 
 def plot_knot_dots(field, bigSingularity=False, axesAll=True,
-                   size=plt.rcParams['lines.markersize'] ** 2, color=None, show=False):
+                   size=plt.rcParams['lines.markersize'] ** 2, color=None, show=True):
     """
     ploting the 3d scatters (or 2d) from the field or from the dict with dots
     :param field: can be complex field or dictionary with dots to plot
@@ -44,12 +47,14 @@ def plot_knot_dots(field, bigSingularity=False, axesAll=True,
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     if len(np.shape(dotsPlus)) == 2:
-        pl.plot_scatter_3D(dotsPlus[:, 0], dotsPlus[:, 1], dotsPlus[:, 2], ax=ax, size=size, color=color)
+        pl.plot_scatter_3D(dotsPlus[:, 0], dotsPlus[:, 1], dotsPlus[:, 2], ax=ax, size=size, color=color, show=False)
         if len(np.shape(dotsMinus)) == 2:
-            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
+            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color
+                               , show=False)
     else:
         if len(np.shape(dotsPlus)) == 2:
-            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color)
+            pl.plot_scatter_3D(dotsMinus[:, 0], dotsMinus[:, 1], dotsMinus[:, 2], ax=ax, size=size, color=color
+                               , show=False)
         else:
             print(f'no singularities to plot')
     if show:
@@ -317,6 +322,177 @@ def integral_number3_OAMpower_FengLiPaper(fieldFunction, rMin, rMax, rResolution
     return pL
 
 
+def knot_build_pyknotid(dotsKnotList, **kwargs):
+    """
+    function build normilized pyknotid knot
+    :return: pyknotid spacecurve
+    """
+
+    zMid = (max(z for x, y, z in dotsKnotList) + min(z for x, y, z in dotsKnotList)) / 2
+    xMid = (max(x for x, y, z in dotsKnotList) + min(x for x, y, z in dotsKnotList)) / 2
+    yMid = (max(y for x, y, z in dotsKnotList) + min(y for x, y, z in dotsKnotList)) / 2
+    knotSP = sp.Knot(np.array(dotsKnotList) - [xMid, yMid, zMid], **kwargs)
+    return knotSP
+
+
+def fill_dotsKnotList_mine(dots):
+    """####################################################################################
+    fill in self.dotsList by removing charge sign and placing everything into the list [[x, y, z], [x, y, z]...]
+    haven't checked if it works
+    :return: None
+    """
+
+    def min_dist(dot, dots):
+        elements = [(list(fg.distance_between_points(dot, d)), i) for i, d in enumerate(dots)]
+        minEl = min(elements, key=lambda i: i[0])
+        return minEl
+
+    dotsKnotList = []
+    dotsDict = {}
+    for [x, y, z] in dots:
+
+        if not (z in dotsDict):
+            dotsDict[z] = []
+        dotsDict[z].append([x, y])
+    print(dotsDict)
+    indZ = next(iter(dotsDict))  # z coordinate
+    indInZ = 0  # dot number in XY plane at z
+    indexes = np.array([-1, 0, 1])  # which layers we are looking at
+    currentDot = dotsDict[indZ].pop(indInZ)
+    # distCheck = 20
+    while dotsDict:
+        # print(indZ, currentDot, dotsDict)
+        minList = []  # [min, layer, position in Layer] for all indexes + indZ layers
+        for i in indexes + indZ:  # searching the closest element among indexes + indZ
+            if not (i in dotsDict):
+                continue
+            minVal, min1Ind = min_dist(currentDot, dotsDict[i])
+            # if minVal <= distCheck:
+            minList.append([minVal, i, min1Ind])
+        if not minList:
+            newPlane = 2
+            while not minList:
+                for i in [-newPlane, newPlane] + indZ:  # searching the closest element among indexes + indZ
+                    if not (i in dotsDict):
+                        continue
+                    minVal, min1Ind = min_dist(currentDot, dotsDict[i])
+                    # if minVal <= distCheck:
+                    minList.append([minVal, i, min1Ind])
+                newPlane += 1
+            if newPlane > 3:
+                print(f'we have some dots left. Stopped')
+                print(indZ, currentDot, dotsDict)
+                break
+            print(f'dots are still there, the knot builred cannot use them all\nnew plane: {newPlane}')
+        minFin = min(minList, key=lambda i: i[0])
+        # if minFin[1] != indZ:
+        dotsKnotList.append([*dotsDict[minFin[1]].pop(minFin[2]), minFin[1]])
+        currentDot = dotsKnotList[-1][:-1]  # changing the current dot to a new one
+        indZ = minFin[1]
+        # else:
+        #     dotsDict[minFin[1]].pop(minFin[2])
+        #     currentDot = self.dotsList[-1][:-1]  # changing the current dot to a new one
+        #     indZ = minFin[1]
+        # currentDot = self.dotsList[-1][:-1][:]  # changing the current dot to a new one
+        # indZ = minFin[1]
+        # dotsDict[minFin[1]].pop(minFin[2])
+        if not dotsDict[indZ]:  # removing the empty plane (0 dots left)
+            del dotsDict[indZ]
+    return dotsKnotList
+
+
+def dots_dens_reduction(dots, checkValue, checkNumber=3):
+    """
+    Function remove extra density from the singularity lines (these extra dots can be due to the
+    extra planes XZ and YZ
+    we remove the dot if there are to many close to it dots
+    :param dots: dots array [[x, y, z],...]
+    :param checkValue: distance between the dots to check
+    :param checkNumber: how many dots we check
+    :return: new dots array [[x, y, z],...]
+    """
+    dotsFinal = dots
+    while True:
+        distance_matrix = euclidean_distance_matrix(dotsFinal, dotsFinal)
+        print(len(dotsFinal))
+        for i, line in enumerate(distance_matrix):
+            lineSorted = np.sort(line)
+            if lineSorted[checkNumber] < checkValue:
+                dotsFinal = np.delete(dotsFinal, i, 0)
+                break
+        else:
+            break
+    return dotsFinal
+
+
+def dots_filter(dots, checkValue, checkNumber=1):
+    """
+    remove dots which have no close enough neighbors
+    :param dots: dots array [[x, y, z],...]
+    :param checkValue: distance between the dots to check
+    :param checkNumber: how many dots should be close the the dot
+    :return: new dots array [[x, y, z],...]
+    """
+    distance_matrix = euclidean_distance_matrix(dots, dots)
+    minSum = 0
+    indStay = []
+    for i, line in enumerate(distance_matrix):
+        value = line[line > 0].min()
+        minSum += value
+        lineSorted = np.sort(line)
+        if lineSorted[checkNumber] < checkValue:
+            indStay.append(i)
+    print(f"avg_distance: {minSum / np.shape(distance_matrix)[0]}")
+    return dots[indStay]
+
+
+def knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                            checkValue2=4, checkNumber2=3,
+                            checkValue3=4, checkNumber3=3, dotsFix=True):
+    """
+    building the sequence from the dots for the knot using TSP problem.
+    :param dots: dots array [[x, y, z],...]
+    :param checkValue1: dots_filter 1
+    :param checkNumber1: dots_filter 1
+    :param checkValue2: dots_filter 2
+    :param checkNumber2: dots_filter 2
+    :param checkValue3: dots_dens_reduction
+    :param checkNumber3: dots_dens_reduction
+    :param dotsFix: if the dots are already good for the knot, it's possible to skip all step before TSP
+    :return: sequential set of dots
+    """
+    if dotsFix:
+        # filtering single separated dots
+        newDots = dots_filter(dots, checkValue=checkValue1, checkNumber=checkNumber1)
+        # filtering 2-4 dots clusters
+        newDots2 = dots_filter(newDots, checkValue=checkValue2, checkNumber=checkNumber2)
+        newDots3 = dots_dens_reduction(newDots2, checkValue=checkValue3, checkNumber=checkNumber3)
+    else:
+        newDots3 = dots
+    distance_matrix = euclidean_distance_matrix(newDots3, newDots3)
+    permutation, distance = solve_tsp_local_search(distance_matrix)
+    dotsKnotList = newDots3[permutation]
+    return dotsKnotList
+
+
+def plot_knot_pyknotid(dots, add_closure=True, clf=False, interpolation=None, **kwargs):
+    """
+    ploting the space curve from the dots-line
+    :param dots: dots array [[x, y, z],...]
+    :param add_closure: closing of the knot
+    :param clf: simplyfication of the knot
+    :param interpolation: how many dots for the interpolation
+    :return: None
+    """
+    knotPykn = knot_build_pyknotid(dots, add_closure=add_closure)
+    # knotPykn.plot_projection()
+    if interpolation:
+        knotPykn.interpolate(interpolation)
+    knotPykn.plot(clf=clf, **kwargs)
+    plt.plot([0, 0], [0, 0])
+    plt.show()
+
+
 class Singularities3D:
     """
     Work with singularities of any 3D complex field
@@ -579,16 +755,13 @@ class Knot(Singularities3D):
 
 
 if __name__ == '__main__':
-    import timeit
-    import sympy
-    from python_tsp.distances import euclidean_distance_matrix
-    from python_tsp.heuristics import solve_tsp_local_search
+
 
     loading_field = False
     if loading_field:
         fileName = f'C:\\Users\\Dima\\Box\\Knots Exp\\Experimental Data\\7-13-2022\\Field SR = 0.95\\3foil_turb_25.mat'
         field_experiment = fg.reading_file_mat(fileName=fileName, fieldToRead='U',
-                                          printV=False)
+                                               printV=False)
         # pl.plot_2D(np.abs(field_experiment))
         # pl.plot_2D(np.angle(field_experiment))
 
@@ -603,12 +776,13 @@ if __name__ == '__main__':
         #                      opacityscale=[[0, 0], [0.1, 0], [0.2, 0], [0.3, 0.6], [1, 1]], opacity=0.2, surface_count=20,show=True)
         exit()
 
+
     def func_time_main():
         xMinMax = 3
         yMinMax = 3
         zMinMax = 0.8
         zRes = 70
-        xRes = yRes = 80
+        xRes = yRes = 70
         xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
         coeff = [1.715, -5.662, 6.381, -2.305, -4.356]
         phase = [0, 0, 0, 0, 0]
@@ -617,160 +791,31 @@ if __name__ == '__main__':
         # dots = get_singularities(np.angle(beam), bigSingularity=False, axesAll=False)
         # pl.plot_2D(np.abs(beam[:,:, zRes//2]))
         dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
-                          'Experimental Data\\dots\\trefoil\\Field SR = 0.95\\3foil_turb_25.npy',  # 25
+                          'Experimental Data\\dots\\trefoil\\Previous\\Field SR = 0.95\\3foil_turb_25.npy',  # 25
                           allow_pickle=True).item()
         # dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
         #                   'Experimental Data\\dots\\trefoil\\SR=0.9\\3foil_turb_6.npy',  # 25
         #                   allow_pickle=True).item()
+
         dots = get_singularities(dotsExp)
 
         pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
 
-        def dots_dens_decreaser(dots, checkValue, checkNumber=3):
-            dotsFinal = dots
-            while True:
-                distance_matrix = euclidean_distance_matrix(dotsFinal, dotsFinal)
-                print(len(dotsFinal))
-                for i, line in enumerate(distance_matrix):
-                    lineSorted = np.sort(line)
-                    # print(lineSorted)
-                    if lineSorted[checkNumber] < checkValue:
-                        dotsFinal = np.delete(dotsFinal, i, 0)
-                        break
-                else:
-                    break
-
-            # print(i, value)
-            return dotsFinal
-
-        def dots_filter(dots, checkValue, checkNumber=1):
-            distance_matrix = euclidean_distance_matrix(dots, dots)
-            minSum = 0
-            indStay = []
-            for i, line in enumerate(distance_matrix):
-                value = line[line > 0].min()
-                minSum += value
-                lineSorted = np.sort(line)
-                if lineSorted[checkNumber] < checkValue:
-                    indStay.append(i)
-            print(f"avg_distance: {minSum / np.shape(distance_matrix)[0]}")
-            # print(i, value)
-            return dots[indStay]
-
         # print(indStay, print(len(indStay)))
         #
-        def fill_dotsKnotList_mine(dots):
-            """
-            fill in self.dotsList by removing charge sign and placing everything into the list [[x, y, z], [x, y, z]...]
-            :return: None
-            """
 
-            def min_dist(dot, dots):
-                elements = [(list(fg.distance_between_points(dot, d)), i) for i, d in enumerate(dots)]
-                minEl = min(elements, key=lambda i: i[0])
-                return minEl
 
-            dotsKnotList = []
-            dotsDict = {}
-            for [x, y, z] in dots:
-
-                if not (z in dotsDict):
-                    dotsDict[z] = []
-                dotsDict[z].append([x, y])
-            print(dotsDict)
-            indZ = next(iter(dotsDict))  # z coordinate
-            indInZ = 0  # dot number in XY plane at z
-            indexes = np.array([-1, 0, 1])  # which layers we are looking at
-            currentDot = dotsDict[indZ].pop(indInZ)
-            # distCheck = 20
-            while dotsDict:
-                # print(indZ, currentDot, dotsDict)
-                minList = []  # [min, layer, position in Layer] for all indexes + indZ layers
-                for i in indexes + indZ:  # searching the closest element among indexes + indZ
-                    if not (i in dotsDict):
-                        continue
-                    minVal, min1Ind = min_dist(currentDot, dotsDict[i])
-                    # if minVal <= distCheck:
-                    minList.append([minVal, i, min1Ind])
-                if not minList:
-                    newPlane = 2
-                    while not minList:
-                        for i in [-newPlane, newPlane] + indZ:  # searching the closest element among indexes + indZ
-                            if not (i in dotsDict):
-                                continue
-                            minVal, min1Ind = min_dist(currentDot, dotsDict[i])
-                            # if minVal <= distCheck:
-                            minList.append([minVal, i, min1Ind])
-                        newPlane += 1
-                    if newPlane > 3:
-                        print(f'we have some dots left. Stopped')
-                        print(indZ, currentDot, dotsDict)
-                        break
-                    print(f'dots are still there, the knot builred cannot use them all\nnew plane: {newPlane}')
-                minFin = min(minList, key=lambda i: i[0])
-                # if minFin[1] != indZ:
-                dotsKnotList.append([*dotsDict[minFin[1]].pop(minFin[2]), minFin[1]])
-                currentDot = dotsKnotList[-1][:-1]  # changing the current dot to a new one
-                indZ = minFin[1]
-                # else:
-                #     dotsDict[minFin[1]].pop(minFin[2])
-                #     currentDot = self.dotsList[-1][:-1]  # changing the current dot to a new one
-                #     indZ = minFin[1]
-                # currentDot = self.dotsList[-1][:-1][:]  # changing the current dot to a new one
-                # indZ = minFin[1]
-                # dotsDict[minFin[1]].pop(minFin[2])
-                if not dotsDict[indZ]:  # removing the empty plane (0 dots left)
-                    del dotsDict[indZ]
-            return dotsKnotList
-
-        newDots= dots_filter(dots, checkValue=2, checkNumber=1)
-        # pl.plot_scatter_3D(newDots[:, 0], newDots[:, 1], newDots[:, 2])
-        newDots2 = dots_filter(newDots, checkValue=4, checkNumber=3)
-        pl.plot_scatter_3D(newDots2[:, 0], newDots2[:, 1], newDots2[:, 2], size=100)
-        newDots3 = dots_dens_decreaser(newDots2, checkValue=3, checkNumber=3)
+        # pl.plot_scatter_3D(newDots2[:, 0], newDots2[:, 1], newDots2[:, 2], size=100)
         # pl.plot_scatter_3D(newDots3[:, 0], newDots3[:, 1], newDots3[:, 2], size=100)
         # newDots3 = fill_dotsKnotList_mine(newDots2)
-        pl.plot_scatter_3D(newDots3[:, 0], newDots3[:, 1], newDots3[:, 2], size=100)
-        distance_matrix = euclidean_distance_matrix(newDots3, newDots3)
-        permutation, distance = solve_tsp_local_search(distance_matrix)
+        dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                    checkValue2=4, checkNumber2=3,
+                                    checkValue3=3, checkNumber3=3)
+        pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1],dotsKnot[:, 2], size=100)
 
-        # print(permutation[:10])
-        # print(dots[permutation])
-        # print(permutation)
-        dotsKnotList = newDots3[permutation]
-
-        def build_knot_pyknotid(dotsKnotList,**kwargs):
-            """
-            function build normilized pyknotid knot
-            :return:
-            """
-
-            zMid = (max(z for x, y, z in dotsKnotList) + min(z for x, y, z in dotsKnotList)) / 2
-            xMid = (max(x for x, y, z in dotsKnotList) + min(x for x, y, z in dotsKnotList)) / 2
-            yMid = (max(y for x, y, z in dotsKnotList) + min(y for x, y, z in dotsKnotList)) / 2
-            knotSP = sp.Knot(np.array(dotsKnotList) - [xMid, yMid, zMid], **kwargs)
-            return knotSP
-
-        # fig = plt.figure()
-        #
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.plot(dotsKnotList[:, 0], dotsKnotList[:, 1], dotsKnotList[:, 2])
-        # plt.show()
-        # exit()
-        knotPykn = build_knot_pyknotid(dotsKnotList, add_closure=True)
-        # knotPykn.plot_projection()
-        knotPykn.interpolate(350)
-        knotPykn.plot(clf=False)
-        plt.plot([0,0], [0,0])
-        plt.show()
+        plot_knot_pyknotid(dotsKnot)
         # pl.plot_scatter_3D(dotsKnotList[:,0],dotsKnotList[:,1],dotsKnotList[:,2])
         exit()
-        for i, dot in enumerate(permutation[:10]):
-            print(dotsKnotList[dot],dotsKnotList[permutation[:10]][i])
-
-        # print(dotsKnotList[permutation[:10]])
-        exit()
-        # plot_knot_dots(beam, show=True)
 
 
     timeit.timeit(func_time_main, number=1)
