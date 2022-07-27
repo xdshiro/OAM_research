@@ -475,7 +475,7 @@ def knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
     return dotsKnotList
 
 
-def plot_knot_pyknotid(dots, add_closure=True, clf=False, interpolation=None, **kwargs):
+def plot_knot_pyknotid(dots, add_closure=True, clf=False, interpolation=None, per=False, **kwargs):
     """
     ploting the space curve from the dots-line
     :param dots: dots array [[x, y, z],...]
@@ -484,13 +484,17 @@ def plot_knot_pyknotid(dots, add_closure=True, clf=False, interpolation=None, **
     :param interpolation: how many dots for the interpolation
     :return: None
     """
+    import warnings
+    warnings.filterwarnings("ignore")
     knotPykn = knot_build_pyknotid(dots, add_closure=add_closure)
     # knotPykn.plot_projection()
     if interpolation:
-        knotPykn.interpolate(interpolation)
+        knotPykn.interpolate(interpolation, quiet=True, per=per)
     knotPykn.plot(clf=clf, **kwargs)
-    plt.plot([0, 0], [0, 0])
-    plt.show()
+    from vispy import app
+    app.run()
+    # plt.plot([0, 0], [0, 0])
+    # plt.show()
 
 
 class Singularities3D:

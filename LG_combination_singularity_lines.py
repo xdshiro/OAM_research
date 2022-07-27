@@ -26,6 +26,106 @@ def find_closet_to_point_dot(dots, point):
             distance = distanceCurrent
             ind = i
     return ind
+
+
+def dots_move_center(dots):
+    """
+    moving dots to the center of the object
+    """
+    center = np.sum(dots, axis=0) / len(dots)
+    return dots - center
+
+def plot_vispy_tube(dots, clf=False, tube_radius=40, shading='smooth', fov=20):
+        from vispy import scene
+        from colorsys import hsv_to_rgb
+        # def clear_vispy_canvas():
+        #     global vispy_canvas
+        #     if vispy_canvas is None:
+        #         return
+        #     try:
+        #         vispy_canvas.unfreeze()
+        #     except AttributeError:  # depends on Vispy version
+        #         pass
+        #     vispy_canvas.central_widget.remove_widget(vispy_canvas.view)
+        #     vispy_canvas.view = vispy_canvas.central_widget.add_view()
+        #
+        # if clf:
+        #     vispy_canvas.central_widget.remove_widget(vispy_canvas.view)
+        #     vispy_canvas.view = vispy_canvas.central_widget.add_view()
+        canvas = scene.SceneCanvas(keys='interactive')
+        view = canvas.central_widget.add_view()
+        colors = np.linspace(0, 1, len(dots))
+        colors = np.array([hsv_to_rgb(c, 1, 1) for c in colors])
+        l = scene.visuals.Tube(dots,
+                               color=colors,
+                               shading=shading,
+                               tube_points=8,
+                               radius=tube_radius,
+                               closed=True)
+        # if zero_centroid:
+        #     l.transform = MatrixTransform()
+        #     # l.transform = scene.transforms.AffineTransform()
+        #     l.transform.translate(-1 * n.average(points, axis=0))
+        # view.add(l)
+
+        flip = (True, True, False)
+        view.camera = scene.TurntableCamera(fov=fov, flip=flip, distance=7.5 * np.max(np.abs(dots)))
+        view.camera.set_range((-20, 20), (-20, 20), (-20, 20))
+        canvas.show()
+        canvas.app.run()
+
+
+# def plot_line_vispy(points, clf=True, tube_radius=1.,
+#                     colour=None, zero_centroid=True,
+#                     closed=True, mus=None,
+#                     cmap=None, fov=0, flip=(False, False, False),
+#                     tube_points=8, **kwargs):
+#     # Add an extra point to fix tube drawing bug
+#     last_tangent = points[-1] - points[-2]
+#     points = n.vstack([points, points[-1] + 0.0001 * last_tangent])
+#
+#     ensure_vispy_canvas()
+#     if clf:
+#         clear_vispy_canvas()
+#     canvas = vispy_canvas
+#     from vispy import app, scene, color
+#
+#     if isinstance(cmap, str):
+#         from matplotlib.cm import get_cmap
+#         mpl_cmap = get_cmap(cmap)
+#         cmap = lambda v: n.array(mpl_cmap(v))
+#     cmap = cmap or (lambda c: hsv_to_rgb(c, 1, 1))
+#
+#     if colour is None:
+#         colours = n.linspace(0, 1, len(points))
+#         colours = n.array([cmap(c) for c in colours])
+#     else:
+#         colours = color.ColorArray(colour)
+#
+#     if mus is not None:
+#         colours = n.array([hsv_to_rgb(c, 1, 1) for c in mus])
+#
+#     l = scene.visuals.Tube(points, color=colours,
+#                            shading='smooth',
+#                            radius=tube_radius,
+#                            tube_points=tube_points,
+#                            closed=closed)
+#
+#     canvas.view.add(l)
+#     # canvas.view.camera = 'arcball'
+#     canvas.view.camera = scene.ArcballCamera(fov=30, flip=flip, distance=7.5 * n.max(
+#         n.abs(points)))
+#     # canvas.view.camera = scene.TurntableCamera(fov=30)
+#     if zero_centroid:
+#         l.transform = MatrixTransform()
+#         # l.transform = scene.transforms.AffineTransform()
+#         l.transform.translate(-1 * n.average(points, axis=0))
+#
+#     canvas.show()
+#     # import ipdb
+#     # ipdb.set_trace()
+#     return canvas
+
 if __name__ == '__main__':
     milnor = False
     if milnor:
@@ -33,23 +133,114 @@ if __name__ == '__main__':
         beam = bp.milnor_Pol_u_v_any(xyzMesh, uOrder=4, vOrder=1, H=1)
         dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
         dots = fg.dots3D_rescale(dots, xyzMesh)
-        pl.plot_scatter_3D(dots[:, 0],dots[:, 1],dots[:, 2])
+        pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
         # plot_line_and_field(beam, xyzMesh)
         exit()
-    pyknotid = True
+    pyknotid = False
     if pyknotid:
-        dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\Experimental Data\\dots\\trefoil\\'
+        # def plot_vispy_tube(points, clf=True, tube_radius=1.,
+        #                     colour=None, #zero_centroid=True,
+        #                     closed=False, mus=None,
+        #                     cmap=None,
+        #                     tube_points=8, **kwargs):
+        #     from colorsys import hsv_to_rgb
+        #     def clear_vispy_canvas():
+        #         global vispy_canvas
+        #         if vispy_canvas is None:
+        #             return
+        #         try:
+        #             vispy_canvas.unfreeze()
+        #         except AttributeError:  # depends on Vispy version
+        #             pass
+        #         vispy_canvas.central_widget.remove_widget(vispy_canvas.view)
+        #         vispy_canvas.view = vispy_canvas.central_widget.add_view()
+        #
+        #     def ensure_vispy_canvas():
+        #         global vispy_canvas
+        #         if vispy_canvas is None:
+        #             from vispy import app, scene
+        #             canvas = scene.SceneCanvas(keys='interactive', bgcolor='white')
+        #             try:
+        #                 canvas.unfreeze()
+        #             except AttributeError:  # depends on Vispy version
+        #                 pass
+        #             canvas.view = canvas.central_widget.add_view()
+        #             vispy_canvas = canvas
+        #     # Add an extra point to fix tube drawing bug
+        #     # last_tangent = points[-1] - points[-2]
+        #     # points = n.vstack([points, points[-1] + 0.0001 * last_tangent])
+        #
+        #     ensure_vispy_canvas()
+        #     if clf:
+        #         clear_vispy_canvas()
+        #     canvas = vispy_canvas
+        #     from vispy import app, scene, color
+        #
+        #     if isinstance(cmap, str):
+        #         from matplotlib.cm import get_cmap
+        #         mpl_cmap = get_cmap(cmap)
+        #         cmap = lambda v: np.array(mpl_cmap(v))
+        #     cmap = cmap or (lambda c: hsv_to_rgb(c, 1, 1))
+        #
+        #     if colour is None:
+        #         colours = np.linspace(0, 1, len(points))
+        #         colours = np.array([cmap(c) for c in colours])
+        #     else:
+        #         colours = color.ColorArray(colour)
+        #
+        #     if mus is not None:
+        #         colours = np.array([hsv_to_rgb(c, 1, 1) for c in mus])
+        #
+        #     l = scene.visuals.Tube(points, color=colours,
+        #                            shading='smooth',
+        #                            radius=tube_radius,
+        #                            tube_points=tube_points,
+        #                            closed=closed)
+        #
+        #     canvas.view.add(l)
+        #     # canvas.view.camera = 'arcball'
+        #     canvas.view.camera = scene.ArcballCamera(fov=30, distance=7.5 * np.max(
+        #         np.abs(points)))
+        #     # canvas.view.camera = scene.TurntableCamera(fov=30)
+        #     # if zero_centroid:
+        #     #     l.transform = MatrixTransform()
+        #     #     # l.transform = scene.transforms.AffineTransform()
+        #     #     l.transform.translate(-1 * n.average(points, axis=0))
+        #
+        #     canvas.show()
+        #     # import ipdb
+        #     # ipdb.set_trace()
+        #     return canvas
+
+        # dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\Experimental Data\\dots\\trefoil\\'
+        #                   'Field 3foil noturb\\3foil_noturb_1.npy',  # 25
+        #                   allow_pickle=True).item()
+
+        dotsExp = np.load('C:\\Users\\Cmex-\\Box\\Knots Exp\\Experimental Data\\dots\\trefoil\\'
                           'Field 3foil noturb\\3foil_noturb_1.npy',  # 25
                           allow_pickle=True).item()
         dots = sing.get_singularities(dotsExp)
 
+
         # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
         dotsKnot = sing.knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
-                                           checkValue2=4, checkNumber2=3,
-                                           checkValue3=3, checkNumber3=3)
+                                                checkValue2=4, checkNumber2=3,
+                                                checkValue3=3, checkNumber3=3)
         # pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2], size=100)
         dotsKnot = np.roll(dotsKnot, -1 * find_closet_to_point_dot(dotsKnot, [0, 0, 0]), axis=0)
-        sing.plot_knot_pyknotid(dotsKnot, interpolation=400, tube_radius=2.5, tube_points=12, fov=30)
+
+
+
+
+        # dotsKnot = dots_move_center(dotsKnot)
+        # fig = pl.plot_3D_dots_go(dotsKnot)
+        # fig.show()
+        # print(dotsKnot)
+        # exit()
+        sing.plot_knot_pyknotid(dotsKnot, interpolation=300, tube_radius=2.5, per=True, add_closure=False,
+                                tube_points=14, fov=0, flip=(False, False, True))
+        plot_vispy_tube(dotsKnot)
+        exit()
         modesTrefoil = [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)]
         coeffTrefoil = [1.29, -3.95, 7.49, -3.28, -3.98]
         xMinMax = 2.1
@@ -65,9 +256,10 @@ if __name__ == '__main__':
         dotsKnot = sing.knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
                                                 checkValue2=4, checkNumber2=3,
                                                 checkValue3=3, checkNumber3=3)[::-1]
-        dotsKnot = np.roll(dotsKnot, -1 * find_closet_to_point_dot(dotsKnot, [0, 0, 0]), axis=0)
+        dotsKnot = np.roll(dotsKnot, -1 * find_closet_to_point_dot(dotsKnot, [0, 0, 0]) + 40, axis=0)
         # pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2], size=100)
-        sing.plot_knot_pyknotid(dotsKnot, interpolation=400, tube_radius=2.5, tube_points=12, clf=True)
+        sing.plot_knot_pyknotid(dotsKnot, interpolation=300, tube_radius=2.5, per=False, add_closure=False,
+                                tube_points=14, fov=0, flip=(False, False, True))
         # , antialias=True,
         #                                 light_dir=(180,90,-50)
         # dots = fg.dots3D_rescale(dots, xyzMesh)
@@ -75,8 +267,8 @@ if __name__ == '__main__':
     xMinMax = 2.1
     yMinMax = 2.1
     zMinMax = 0.5
-    zRes = 70
-    xRes = yRes = 70
+    zRes = 200
+    xRes = yRes = 200
     xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
     # modes = [(0, 0), (0, 1), (0, 2), (1, 0), (2, 0), (2, 1), (2, 2)]
     # modes = [(0, 0), (0, 1), (1, 0), (1, 1)]
@@ -93,17 +285,21 @@ if __name__ == '__main__':
     coeffHopf = [2.96, -6.23, 4.75, -5.49]
     modesTrefoil = [(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)]
     coeffTrefoil = [1.29, -3.95, 7.49, -3.28, -3.98]
-    beam = bp.LG_combination(*xyzMesh, coefficients=coeffHopf, modes=modesHopf)
+    beam = bp.LG_combination(*xyzMesh, coefficients=coeffTrefoil, modes=modesTrefoil)
+    xyz = fg.arrays_from_mesh(xyzMesh)
+    # pl.plot_2D(np.angle(beam[:,:,int(170 * 1.5)]), x=xyz[0], y=xyz[1], map='jet')
+    #
+    # exit()
     # sing.plot_knot_dots(beam, show=True, axesAll=False, color='k')
     dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
     dots = fg.dots3D_rescale(dots, xyzMesh)
     # dots = sing.get_singularities(dots)
-    fig = pl.plot_3D_dots_go(dots)
+    fig = pl.plot_3D_dots_go(dots, marker={'size':15, 'color':'black'})
     # xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
     # dotsExp = np.load(f'C:\\Users\\Dima\\Box\\Knots Exp\\Experimental Data\\dots'
     #                   f'\\trefoil\\Field 3foil noturb\\3foil_noturb_1.npy',
     #                allow_pickle=True).item()
-     # dots = sing.get_singularities(dotsExp)
+    # dots = sing.get_singularities(dotsExp)
     # xMinMax = 200
     # yMinMax = 200
     # zMinMax = 80
@@ -127,10 +323,10 @@ if __name__ == '__main__':
     # iplot(fig)
     fig.update_layout(
         scene=dict(
-            aspectratio_x=2, aspectratio_y=2, aspectratio_z=1,
+            aspectratio_x=2, aspectratio_y=2, aspectratio_z=2,
             xaxis=dict(range=[-xMinMax, xMinMax]),
             yaxis=dict(range=[-yMinMax, yMinMax]),
-            zaxis=dict(range=[-zMinMax, zMinMax]),),
+            zaxis=dict(range=[-zMinMax, zMinMax]), ),
         # width=700,
         # margin=dict(r=0, l=10, b=70, t=10)
     )
