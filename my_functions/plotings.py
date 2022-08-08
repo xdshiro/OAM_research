@@ -4,6 +4,7 @@ Including all the ploting functions, 2D, 3D, dots
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import my_functions.functions_general as fg
 
 # standard values for fonts
 ticksFontSize = 18
@@ -52,6 +53,26 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     return ax
 
 
+def plot_plane_go(z, mesh, fig=None, opacity=0.6, show=False,
+                  colorscale=([0, '#aa9ce2'], [1, '#aa9ce2']), **kwargs):
+    """
+    plotting the cross-section XY plane in 3d go figure
+    :param z: z coordinate of the plane
+     :param colorscale: need values for 0 and 1 (the same), or something like 'RdBu'
+    :param kwargs: for go.Surface
+    :return: fig
+    """
+    xyz = fg.arrays_from_mesh(mesh)
+
+    if fig is None:
+        fig = go.Figure()
+    fig.add_trace(go.Surface(x=xyz[0], y=xyz[1], z=z,
+                             opacity=opacity, colorscale=colorscale, showscale=False, **kwargs))
+    if show:
+        fig.show()
+    return fig
+
+
 def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False):
     """
     plotting dots in the interactive window in browser using plotly.graph_objects
@@ -60,7 +81,7 @@ def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False):
     :return: fig
     """
     if marker is None:
-        marker = dict(color='rgb(0,0,0)')
+        marker = {'size': 8, 'color': 'black'}
     if fig is None:
         fig = go.Figure()
     fig.add_trace(go.Scatter3d(x=dots[:, 0], y=dots[:, 1], z=dots[:, 2],

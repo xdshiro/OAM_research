@@ -27,6 +27,14 @@ def phi(x, y):
     return np.angle(x + 1j * y)
 
 
+def dots_move_center(dots):
+    """
+    moving dots to the center of the object
+    """
+    center = np.sum(dots, axis=0) / len(dots)
+    return dots - center
+
+
 def distance_between_points(point1, point2):
     """
     distance between 2 points in any dimensions
@@ -241,11 +249,7 @@ def random_list(values, diapason, diapason_complex=None):
     return answer
 
 
-
-
-
 ##############################################
-
 
 
 def propagator_split_step_3D(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, k0=1):
@@ -290,6 +294,7 @@ def propagator_split_step_3D(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, 
         fieldReturn[:, :, k] = fieldReturn[:, :, k] * np.exp(nonlinearity_spec(fieldReturn[:, :, k]))
 
     return fieldReturn
+
 
 def one_plane_propagator(fieldPlane, dz, stepsNumber, n0=1, k0=1):  # , shapeWrong=False
     # if shapeWrong is not False:

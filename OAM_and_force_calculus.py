@@ -231,12 +231,12 @@ if __name__ == '__main__':
     # b = [[1, 2], [1,3]]
     # print(np.cross(a))
     # exit()
-    xMinMax = 3.5
-    yMinMax = 3.5
-    zMinMax = 0.5
-    zRes = 140  # 250
-    xRes = 140
-    yRes = 140
+    xMinMax = 1.0
+    yMinMax = 1.0
+    zMinMax = 0.25
+    zRes = 90  # 250
+    xRes = 90
+    yRes = 90
 
     indexing = 'ij'
     xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing=indexing)
@@ -246,10 +246,13 @@ if __name__ == '__main__':
     # coeff = [0, 1]
     modes = ((0, 0), (0, 1), (0, 2), (0, 3), (3, 0))
     coeff = [1.715, -5.662, 6.381, -2.305, -4.356]
+    coeff = [-1, 1, 0, 0, 0]
+    width = [1, 0.6, 1, 1,1]
     # coeff = [0, 0, 0, 0, 1]
     # beam = bp.LG_combination(*xyMesh, coefficients=coeff, modes=modes)
-    beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=modes)
-    force = force_optical(beam, mesh=xyzMesh, alpha=-1 + 0.0001j, indexing=indexing)
+    beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=modes, width=width)
+    # beam *= np.exp(1j * 2 * fg.phi(xyzMesh[0], xyzMesh[1]))
+    force = force_optical(beam, mesh=xyzMesh, alpha=-0 * 1 + 0.0001j, indexing=indexing)
     #
     #
     # def _transposition_ij_xy(md):
@@ -266,10 +269,12 @@ if __name__ == '__main__':
     # force = _transposition_ij_xy(force)
     # xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing='xy')
     # pl.plot_2D(abs(beam[:, :, zRes // 2]), show=True)
-    fig = plot_3D_cones(force, xyzMesh, sizeref=14, filterValue=0.1, colorscale='jet', power=2, random=0.002)
-    dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
-    dots = fg.dots3D_rescale(dots, xyzMesh)
-    fig.add_trace(pl.plot_3D_dots_go(dots))
+
+    fig = plot_3D_cones(force, xyzMesh, sizeref=14, filterValue=0.1, colorscale='jet', power=2, random=0.02)
+    # dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
+    # dots = fg.dots3D_rescale(dots, xyzMesh)
+    # print(dots)
+    # pl.plot_3D_dots_go(dots, fig=fig)
     fig.show()
     # plot_vector_field_2D(force[0][:, :, zRes // 2], force[1][:, :, zRes // 2], lw=2,
     #                      indexing=indexing, density=2, show=True, color=None, cmap='jet')
