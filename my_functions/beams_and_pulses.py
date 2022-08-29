@@ -63,6 +63,32 @@ def trefoil(*x, w, width=1, k0=1, aCoeff=None, coeffPrint=False, **kwargs):
     return field
 
 
+def hopf(*x, w, width=1, k0=1, aCoeff=None, coeffPrint=False, **kwargs):
+    if aCoeff is not None or aCoeff is False:
+        aSumSqr = 0.1 * np.sqrt(sum([a ** 2 for a in aCoeff]))
+        aCoeff /= aSumSqr
+    else:
+        a00 = 1 - 2 * w ** 2 + 2 * w ** 4
+        a01 = 2 * w ** 2 - 4 * w ** 4
+        a02 = 2 * w ** 4
+        a20 = 4 * np.sqrt(2) * w ** 2
+        aCoeff = [a00, a01, a02, a20]
+        aSumSqr = 0.1 * np.sqrt(sum([a ** 2 for a in aCoeff]))
+        aCoeff /= aSumSqr
+    if coeffPrint:
+        print(aCoeff)
+        print(f'a00 -> a01 -> a02 ->... -> a0n -> an0:')
+        for i, a in enumerate(aCoeff):
+            print(f'a{i}: {a:.3f}', end=',\t')
+        print()
+    field = (aCoeff[0] * LG_simple(*x, l=0, p=0, width=width, k0=k0) +
+             aCoeff[1] * LG_simple(*x, l=0, p=1, width=width, k0=k0) +
+             aCoeff[2] * LG_simple(*x, l=0, p=2, width=width, k0=k0) +
+             aCoeff[3] * LG_simple(*x, l=2, p=0, width=width, k0=k0)
+             )
+    return field
+
+
 def milnor_Pol_u_v_any(mesh, uOrder, vOrder, H=1):
     """This function create u^a-v^b Milnor polynomial"""
     x, y, z = mesh

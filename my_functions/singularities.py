@@ -16,6 +16,8 @@ import timeit
 import sympy
 from python_tsp.distances import euclidean_distance_matrix
 from python_tsp.heuristics import solve_tsp_local_search
+from vispy import app
+
 """
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 We can make a graph for tsp, so it is not searching for all the dots, only close z
@@ -412,6 +414,8 @@ def dots_dens_reduction(dots, checkValue, checkNumber=3):
     :return: new dots array [[x, y, z],...]
     """
     dotsFinal = dots
+    if checkValue == 0:
+        return dotsFinal
     while True:
         distance_matrix = euclidean_distance_matrix(dotsFinal, dotsFinal)
         print(len(dotsFinal))
@@ -490,6 +494,7 @@ def plot_knot_pyknotid(dots, add_closure=True, clf=False, interpolation=None, pe
     # knotPykn.plot_projection()
     if interpolation:
         knotPykn.interpolate(interpolation, quiet=True, per=per)
+    knotPykn = sp.Knot(knotPykn.points[2:])
     knotPykn.plot(clf=clf, **kwargs)
     from vispy import app
     app.run()
@@ -760,7 +765,6 @@ class Knot(Singularities3D):
 
 if __name__ == '__main__':
 
-
     loading_field = False
     if loading_field:
         fileName = f'C:\\Users\\Dima\\Box\\Knots Exp\\Experimental Data\\7-13-2022\\Field SR = 0.95\\3foil_turb_25.mat'
@@ -794,32 +798,477 @@ if __name__ == '__main__':
         beam = bp.LG_combination(*xyzMesh, coefficients=coeff, modes=((0, 0), (0, 1), (0, 2), (0, 3), (3, 0)))
         # dots = get_singularities(np.angle(beam), bigSingularity=False, axesAll=False)
         # pl.plot_2D(np.abs(beam[:,:, zRes//2]))
-        dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
-                          'Experimental Data\\dots\\trefoil\\Previous\\Field SR = 0.95\\3foil_turb_25.npy',  # 25
-                          allow_pickle=True).item()
+        # dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+        #                   'Experimental Data\\dots\\trefoil\\Previous\\Field SR = 0.95\\3foil_turb_32.npy',  # 25
+        #                   allow_pickle=True).item()
         # dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
         #                   'Experimental Data\\dots\\trefoil\\SR=0.9\\3foil_turb_6.npy',  # 25
         #                   allow_pickle=True).item()
-
-        dots = get_singularities(dotsExp)
+        # dots = get_singularities(dotsExp)
 
         pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
 
         # print(indStay, print(len(indStay)))
         #
 
-
         # pl.plot_scatter_3D(newDots2[:, 0], newDots2[:, 1], newDots2[:, 2], size=100)
         # pl.plot_scatter_3D(newDots3[:, 0], newDots3[:, 1], newDots3[:, 2], size=100)
         # newDots3 = fill_dotsKnotList_mine(newDots2)
         dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
-                                    checkValue2=4, checkNumber2=3,
-                                    checkValue3=3, checkNumber3=3)
-        pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1],dotsKnot[:, 2], size=100)
-
-        plot_knot_pyknotid(dotsKnot)
+                                           checkValue2=4, checkNumber2=3,
+                                           checkValue3=3, checkNumber3=3)
+        pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2], size=100)
+        plot_knot_pyknotid(dotsKnot, interpolation=300, tube_radius=2.5, per=True, add_closure=False,
+                           tube_points=14, fov=0, flip=(False, False, False))
+        # plot_knot_pyknotid(dotsKnot, interpolation=250, tube)
         # pl.plot_scatter_3D(dotsKnotList[:,0],dotsKnotList[:,1],dotsKnotList[:,2])
         exit()
 
 
-    timeit.timeit(func_time_main, number=1)
+    hopf_ploting = False
+    if hopf_ploting:
+        dotsExp1 = np.load('C:\\WORK\\CODES\\OAM_research\\hopf_exp_l2.npy',
+                           allow_pickle=True)
+        # plot_knot_pyknotid(dotsExp1, interpolation=300, tube_radius=2.5, per=True, add_closure=False,
+        #                    tube_points=14, fov=0, flip=(False, False, False))
+        dotsExp2 = np.load('C:\\WORK\\CODES\\OAM_research\\hopf_exp_l1.npy',
+                           allow_pickle=True)
+        dots = np.concatenate((dotsExp1, dotsExp2), axis=0)
+        # pl.plot_scatter_3D(dots[:, 0], dots[:, 1],dots[:, 2])
+        # plot_knot_pyknotid(dotsExp2, interpolation=300, tube_radius=2.5, per=True, add_closure=False,
+        #                    tube_points=14, fov=0, flip=(False, False, False))
+        loop1 = sp.Knot(dotsExp1, add_closure=False)
+        loop1.interpolate(250, quiet=True, per=False)
+        dotsExp1Smooth = loop1.points[2: -1]
+        loop2 = sp.Knot(dotsExp2, add_closure=False)
+        loop2.interpolate(250, quiet=True, per=False)
+        dotsExp2Smooth = loop2.points[2: -1]
+        # for i in range(len(dotsExp1Smooth) - 1):
+        #     if (fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]) > 2):
+        #         print(i, fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]))
+        # exit()
+        link = sp.Link([dotsExp1Smooth, dotsExp2Smooth])
+        link.plot(tube_radius=2., color='black')
+        app.run()
+    trefoil_ploting = False
+    if trefoil_ploting:
+        dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                          'Experimental Data\\dots\\trefoil\\Previous\\Field SR = 0.95\\3foil_turb_25.npy',  # 25
+                          allow_pickle=True).item()
+        dots = get_singularities(dotsExp)
+        dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                           checkValue2=4, checkNumber2=3,
+                                           checkValue3=3, checkNumber3=3)
+        # trefoil = sp.Knot(dotsKnot, add_closure=False)
+        trefoil = knot_build_pyknotid(dotsKnot)
+        trefoil.interpolate(250, quiet=True, per=False)
+        trefoilSmooth = trefoil.points[2: -1]
+        trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+        trefoil.plot(tube_radius=2.)
+        app.run()
+
+    unknot_ploting = False
+    if unknot_ploting:
+        dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                          'Experimental Data\\dots\\trefoil\\Previous\\SR=0.9\\3foil_turb_6.npy',  # 25
+                          allow_pickle=True).item()
+        dots = get_singularities(dotsExp)
+        # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+        # exit()
+        dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                           checkValue2=4, checkNumber2=3,
+                                           checkValue3=3, checkNumber3=3)
+        # trefoil = sp.Knot(dotsKnot, add_closure=False)
+        trefoil = knot_build_pyknotid(dotsKnot)
+        trefoil.interpolate(250, quiet=True, per=False)
+        trefoilSmooth = trefoil.points[2: -1]
+        trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+        cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+        trefoil.plot(tube_radius=2.)
+        app.run()
+    plot_table = True
+    if plot_table:
+        tr1 = False
+        if tr1:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_1.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 140 and dot[0] > 70])
+            dots = np.array([dot for dot in dots if dot[1] < 140 and dot[1] > 70])
+            # dots = np.array([dot for dot in dots if dot[2] < 140 and dot[2] > 0])
+            pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        tr2 = False
+        if tr2:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_16.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 240 and dot[0] > 87])
+            dots = np.array([dot for dot in dots if dot[1] < 240 and dot[1] > 80])
+            # dots = np.array([dot for dot in dots if dot[2] < 240 and dot[2] > 0])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        tr3 = False
+        if tr3:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_33.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 240 and dot[0] > 90])
+            dots = np.array([dot for dot in dots if dot[1] < 145 and dot[1] > 70])
+            dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 45)])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        un1 = False
+        if un1:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_91.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 240 and dot[0] > 85])
+            dots = np.array([dot for dot in dots if dot[1] < 245 and dot[1] > 80])
+            dots = np.array([dot for dot in dots if dot[2] < 58 and dot[2] > 0])
+            dots = np.array([dot for dot in dots if not (dot[0] > 95 and dot[0] < 110 and dot[1] > 100 and dot[1] < 115
+                                                         and dot[2] > 45)])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 45)])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        un2 = False
+        if un2:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_90.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 150 and dot[0] > 80])
+            dots = np.array([dot for dot in dots if dot[1] < 140 and dot[1] > 70])
+            dots = np.array([dot for dot in dots if dot[2] < 200 and dot[2] > 9])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 95 and dot[0] < 110 and dot[1] > 100 and dot[1] < 115
+            #                                              and dot[2] > 45)])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 45)])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        un3 = False
+        if un3:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_88.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 150 and dot[0] > 80])
+            dots = np.array([dot for dot in dots if dot[1] < 140 and dot[1] > 70])
+            dots = np.array([dot for dot in dots if dot[2] < 52 and dot[2] > 0])
+            dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 48)])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 45)])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+            # exit()
+            dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                               checkValue2=4, checkNumber2=3,
+                                               checkValue3=3, checkNumber3=3)
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        h1 = False
+        if h1:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_95.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 150 and dot[0] > 80])
+            dots = np.array([dot for dot in dots if dot[1] < 140 and dot[1] > 70])
+            dots = np.array([dot for dot in dots if dot[2] < 200 and dot[2] > 9])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 95 and dot[0] < 110 and dot[1] > 100 and dot[1] < 115
+            #                                              and dot[2] > 45)])
+            # dots = np.array([dot for dot in dots if not (dot[0] > 140 and dot[2] > 45)])
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+
+            # dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+            #                                    checkValue2=4, checkNumber2=3,
+            #                                    checkValue3=3, checkNumber3=3)
+            # np.save('h1', dotsKnot)
+            dotsKnot = np.load('h1.npy')
+            for i in range(len(dotsKnot) - 1):
+                print(i, fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]))
+            dot1 = 127
+            dot2 = 221
+            dotsKnot = np.roll(dotsKnot, -dot1 - 1, axis=0)
+            dotsExp1 = dotsKnot[0:dot2 - dot1 - 1, :]
+            # pl.plot_scatter_3D(dotsExp1[:, 0], dotsExp1[:, 1], dotsExp1[:, 2])
+            dotsExp2 = dotsKnot[dot2 - dot1:, :]
+            # pl.plot_scatter_3D(dotsExp2[:, 0], dotsExp2[:, 1], dotsExp2[:, 2])
+            loop1 = sp.Knot(dotsExp1, add_closure=False)
+            loop1.interpolate(250, quiet=True, per=False)
+            dotsExp1Smooth = loop1.points[2: -1]
+            loop2 = sp.Knot(dotsExp2, add_closure=False)
+            loop2.interpolate(250, quiet=True, per=False)
+            dotsExp2Smooth = loop2.points[2: -1]
+            # for i in range(len(dotsExp1Smooth) - 1):
+            #     if (fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]) > 2):
+            #         print(i, fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]))
+            # exit()
+            link = sp.Link([dotsExp1Smooth, dotsExp2Smooth])
+            link.plot(tube_radius=2., color='black')
+            app.run()
+            exit()
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+            trefoil = knot_build_pyknotid(dotsKnot)
+            trefoil.interpolate(250, quiet=True, per=False)
+            trefoilSmooth = trefoil.points[2: -1]
+            trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+            cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+            trefoil.plot(tube_radius=2.)
+            app.run()
+        h2 = False
+        if h2:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_11.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 140 and dot[0] > 0])
+            dots = np.array([dot for dot in dots if dot[1] < 145 and dot[1] > 60])
+            dots = np.array([dot for dot in dots if dot[2] < 55 and dot[2] > 0])
+            dots = np.array([dot for dot in dots if not (dot[0] > 130
+                                                         and dot[2] > 45)])
+
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            if 0:
+                dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                                   checkValue2=4, checkNumber2=3,
+                                                   checkValue3=3, checkNumber3=3)
+                np.save('h2', dotsKnot)
+                trefoil = knot_build_pyknotid(dotsKnot)
+                trefoil.interpolate(250, quiet=True, per=False)
+                trefoilSmooth = trefoil.points[2: -1]
+                trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+                cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+                trefoil.plot(tube_radius=2.)
+                app.run()
+                exit()
+            dotsKnot = np.load('../h2.npy')
+            for i in range(len(dotsKnot) - 1):
+                if fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]) > 5:
+                    print(i, fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]))
+            dot1 = 45
+            dot2 = 166
+            dotsKnot = np.roll(dotsKnot, -dot1 - 1, axis=0)
+            dotsExp1 = dotsKnot[0:dot2 - dot1 - 1, :]
+            # pl.plot_scatter_3D(dotsExp1[:, 0], dotsExp1[:, 1], dotsExp1[:, 2])
+            dotsExp2 = dotsKnot[dot2 - dot1:, :]
+            # pl.plot_scatter_3D(dotsExp2[:, 0], dotsExp2[:, 1], dotsExp2[:, 2])
+            # exit()
+            loop1 = sp.Knot(dotsExp1, add_closure=False)
+            loop1.interpolate(250, quiet=True, per=False)
+            dotsExp1Smooth = loop1.points[2: -1]
+            loop2 = sp.Knot(dotsExp2, add_closure=False)
+            loop2.interpolate(250, quiet=True, per=False)
+            dotsExp2Smooth = loop2.points[2: -1]
+            # for i in range(len(dotsExp1Smooth) - 1):
+            #     if (fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]) > 2):
+            #         print(i, fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]))
+            # exit()
+            link = sp.Link([dotsExp1Smooth, dotsExp2Smooth])
+            link.plot(tube_radius=2., color='black')
+            app.run()
+            exit()
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+        h3 = True
+        if h3:
+            dotsExp = np.load('C:\\Users\\Dima\\Box\\Knots Exp\\'
+                              'Experimental Data\\dots\\trefoil\\Previous\\Fields SR = 0.85 (2)\\3foil_turb_66.npy',
+                              # 25
+                              allow_pickle=True).item()
+            dots = get_singularities(dotsExp)
+            dots = np.array([dot for dot in dots if dot[0] < 150 and dot[0] > 70])
+            dots = np.array([dot for dot in dots if dot[1] < 160 and dot[1] > 65])
+            # dots = np.array([dot for dot in dots if dot[2] < 55 and dot[2] > 0])
+            dots = np.array([dot for dot in dots if not (dot[0] > 130
+                                                         and dot[2] > 50)])
+
+            # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+            # exit()
+            if 0:
+                dotsKnot = knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                                   checkValue2=4, checkNumber2=3,
+                                                   checkValue3=3, checkNumber3=3)
+                np.save('h3', dotsKnot)
+                trefoil = knot_build_pyknotid(dotsKnot)
+                trefoil.interpolate(250, quiet=True, per=False)
+                trefoilSmooth = trefoil.points[2: -1]
+                trefoil = sp.Knot(trefoilSmooth, add_closure=False)
+                cmapMy = [[1, 1, 1, 0], [1, 1, 1, 1]]
+                trefoil.plot(tube_radius=2.)
+                app.run()
+                exit()
+            dotsKnot = np.load('../h3.npy')
+            for i in range(len(dotsKnot) - 1):
+                if fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]) > 5:
+                    print(i, fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]))
+            # exit()
+            dot1 = 125
+            dot2 = 212
+            dotsKnot = np.roll(dotsKnot, -dot1 - 1, axis=0)
+            dotsExp1 = dotsKnot[0:dot2 - dot1 - 1, :]
+            # pl.plot_scatter_3D(dotsExp1[:, 0], dotsExp1[:, 1], dotsExp1[:, 2])
+            dotsExp2 = dotsKnot[dot2 - dot1:, :]
+            # pl.plot_scatter_3D(dotsExp2[:, 0], dotsExp2[:, 1], dotsExp2[:, 2])
+            # exit()
+            loop1 = sp.Knot(dotsExp1, add_closure=False)
+            loop1.interpolate(250, quiet=True, per=False)
+            dotsExp1Smooth = loop1.points[2: -1]
+            loop2 = sp.Knot(dotsExp2, add_closure=False)
+            loop2.interpolate(250, quiet=True, per=False)
+            dotsExp2Smooth = loop2.points[2: -1]
+            # for i in range(len(dotsExp1Smooth) - 1):
+            #     if (fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]) > 2):
+            #         print(i, fg.distance_between_points(dotsExp1Smooth[i], dotsExp1Smooth[i+1]))
+            # exit()
+            link = sp.Link([dotsExp1Smooth, dotsExp2Smooth])
+            link.plot(tube_radius=2., color='black')
+            app.run()
+            exit()
+            # trefoil = sp.Knot(dotsKnot, add_closure=False)
+        if None:
+            if plot_hopf:
+                # dotsExp = np.load('C:\\Users\\Cmex-\\Box\\Knots Exp\\Experimental Data\\dots\\trefoil\\Previous\\'
+                #                   '3foil SR = 0.95 (2)\\3foil_turb_3.npy',  # 25
+                #                   allow_pickle=True).item()
+                # dots = sing.get_singularities(dotsExp)
+                # # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+                # dotsKnot = sing.knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                #                                         checkValue2=4, checkNumber2=3,
+                #                                         checkValue3=3, checkNumber3=3)[::-1]
+                # np.save('hopf_exp', dotsKnot)
+                dotsKnot = np.load('hopf_exp.npy')
+                # pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2])
+                import matplotlib.pyplot as plt
+
+                ax = plt.axes(projection='3d')
+                ax.plot3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2], 'gray')
+                # pl.plot_3D_dots_go(dotsKnot, show=True)
+                # for i in range(len(dotsKnot)-1):
+                #     print(i, fg.distance_between_points(dotsKnot[i], dotsKnot[i+1]))
+                dotsKnot = np.roll(dotsKnot, -38, axis=0)
+                ax.plot3D(dotsKnot[0:61, 0], dotsKnot[0:61, 1], dotsKnot[0:61, 2])
+                np.save('hopf_exp_l1', dotsKnot[0:61])
+                np.save('hopf_exp_l2', dotsKnot[61:])
+                exit()
+                ax.plot3D(dotsKnot[61:, 0], dotsKnot[61:, 1], dotsKnot[61:, 2], 'green')
+                plt.show()
+                exit()
+                modesTrefoil = [(0, 0), (0, 1), (0, 2), (2, 0)]
+                # coeffTrefoil = [2.96, -6.23, 4.75, 5.49]
+                coeffTrefoil = [2.63, -6.32, 4.21, 5.95]
+                xMinMax = 2.5
+                yMinMax = 2.5
+                zMinMax = 0.7
+                zRes = 90
+                xRes = yRes = 90
+                xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, zMin=None)
+                beam = bp.LG_combination(*xyzMesh, coefficients=coeffTrefoil, modes=modesTrefoil)
+                # sing.plot_knot_dots(beam, show=True, axesAll=False, color='k')
+                dots = sing.get_singularities(np.angle(beam), bigSingularity=False, axesAll=True)
+                # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2], size=100)
+                # pl.plot_scatter_3D(dots[:, 0], dots[:, 1], dots[:, 2])
+                # pl.plot_3D_dots_go(dots, show=True)
+                # pl.plot_2D((np.abs(beam[:, :, zRes//2])))
+                dotsKnot = sing.knot_sequence_from_dots(dots, checkValue1=2, checkNumber1=1,
+                                                        checkValue2=4, checkNumber2=3,
+                                                        checkValue3=3, checkNumber3=2)[::-1]
+                # pl.plot_3D_dots_go(dotsKnot, show=True)
+
+                for i in range(len(dotsKnot) - 1):
+                    print(i, fg.distance_between_points(dotsKnot[i], dotsKnot[i + 1]))
+                ax.plot3D(dotsKnot[57:114, 0], dotsKnot[57:114, 1], dotsKnot[57:114, 2])
+                plt.show()
+                exit()
+                # dotsKnot = np.roll(dotsKnot, -1 * find_closet_to_point_dot(dotsKnot, [0, 0, 0]) + 40, axis=0)
+                # pl.plot_scatter_3D(dotsKnot[:, 0], dotsKnot[:, 1], dotsKnot[:, 2], size=100)
+                # sing.plot_knot_pyknotid(dotsKnot, interpolation=300, tube_radius=2.5, per=False, add_closure=False,
+                #                         tube_points=14, fov=0, flip=(False, False, True))
+                # , antialias=True,
+                #                                 light_dir=(180,90,-50)
+                # dots = fg.dots3D_rescale(dots, xyzMesh)
+                exit()
+    # timeit.timeit(func_time_main, number=1)

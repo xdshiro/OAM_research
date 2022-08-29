@@ -53,6 +53,34 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     return ax
 
 
+def plot_scatter_2D(x, y, xname='', yname='', title='',
+            ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize,
+            axis_equal=False, xlim=None, ylim=None, ax=None, show=True,
+            size=plt.rcParams['lines.markersize'] ** 2, color=None,
+            **kwargs):
+    if ax is None:
+        if axis_equal:
+            fig, ax = plt.subplots(figsize=(6, 6))
+        else:
+            fig, ax = plt.subplots(figsize=(8, 6))
+    plt.scatter(x, y, s=size, color=color, **kwargs)
+    plt.xticks(fontsize=ticksFontSize)
+    plt.yticks(fontsize=ticksFontSize)
+    ax.set_xlabel(xname, fontsize=xyLabelFontSize)
+    ax.set_ylabel(yname, fontsize=xyLabelFontSize)
+    plt.title(title, fontweight="bold", fontsize=26)
+    if axis_equal:
+        ax.set_aspect('equal', adjustable='box')
+    if xlim is not None:
+        plt.xlim(xlim[0], xlim[1])
+    if ylim is not None:
+        plt.ylim(ylim[0], ylim[1])
+    plt.tight_layout()
+    if show:
+        plt.show()
+    return ax
+
+
 def plot_plane_go(z, mesh, fig=None, opacity=0.6, show=False,
                   colorscale=([0, '#aa9ce2'], [1, '#aa9ce2']), **kwargs):
     """
@@ -73,7 +101,7 @@ def plot_plane_go(z, mesh, fig=None, opacity=0.6, show=False,
     return fig
 
 
-def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False):
+def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False, **kwargs):
     """
     plotting dots in the interactive window in browser using plotly.graph_objects
     :param dots: [[x,y,z],...]
@@ -85,7 +113,7 @@ def plot_3D_dots_go(dots, mode='markers', marker=None, fig=None, show=False):
     if fig is None:
         fig = go.Figure()
     fig.add_trace(go.Scatter3d(x=dots[:, 0], y=dots[:, 1], z=dots[:, 2],
-                               mode=mode, marker=marker))
+                               mode=mode, marker=marker, **kwargs))
     if show:
         fig.show()
     return fig
@@ -168,3 +196,104 @@ def plot_scatter_3D(X, Y, Z, ax=None, size=plt.rcParams['lines.markersize'] ** 2
     if show:
         plt.show()
     return ax
+
+
+def box_set_go(fig, xyzMinMax=(-1, 1, -1, 1, -1, 1), width=3, perBox=0, mesh=None, autoDots=None):
+    """
+    Function remove the standard layout and put the plot into the box of black lines
+    :param fig: which fig should be updated
+    :param xyzMinMax: boundaries for the box if there is no mesh
+    :param width: width of the lines for the box
+    :param perBox: percentage to make the box bigger
+    :param mesh: if the mesh is given, boundaries are getting automatically
+    :param autoDots: if autoDots == dots => finding the boundaries automatically from dots
+    :return: fig
+    """
+    if autoDots is not None:
+        dots = autoDots
+        xMin, xMax = 1e10, 0
+        yMin, yMax = 1e10, 0
+        zMin, zMax = 1e10, 0
+        for dot in dots:
+            if dot[0] < xMin:
+                xMin = dot[0]
+            if dot[0] > xMax:
+                xMax = dot[0]
+            if dot[1] < yMin:
+                yMin = dot[1]
+            if dot[1] > yMax:
+                yMax = dot[1]
+            if dot[2] < zMin:
+                zMin = dot[2]
+            if dot[2] > zMax:
+                zMax = dot[2]
+    elif mesh is not None:
+        xyz = fg.arrays_from_mesh(mesh)
+        xMin, xMax = xyz[0][0], xyz[0][-1]
+        yMin, yMax = xyz[1][0], xyz[1][-1]
+        zMin, zMax = xyz[2][0], xyz[2][-1]
+    else:
+        xMin, xMax = xyzMinMax[0], xyzMinMax[1]
+        yMin, yMax = xyzMinMax[2], xyzMinMax[3]
+        zMin, zMax = xyzMinMax[4], xyzMinMax[5]
+    if perBox != 0:
+        xMin, xMax = xMin - (xMax - xMin) * perBox, xMax + (xMax - xMin) * perBox
+        yMin, yMax = yMin - (yMax - yMin) * perBox, yMax + (yMax - yMin) * perBox
+        zMin, zMax = zMin - (zMax - zMin) * perBox, zMax + (zMax - zMin) * perBox
+
+    lineX = np.array([[xMin, yMin, zMin], [xMax, yMin, zMin], [xMax, yMax, zMin],
+                      [xMin, yMax, zMin], [xMin, yMin, zMin]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    lineX = np.array([[xMin, yMin, zMax], [xMax, yMin, zMax], [xMax, yMax, zMax],
+                      [xMin, yMax, zMax], [xMin, yMin, zMax]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    lineX = np.array([[xMin, yMin, zMin], [xMin, yMin, zMax]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    lineX = np.array([[xMax, yMin, zMin], [xMax, yMin, zMax]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    lineX = np.array([[xMax, yMax, zMin], [xMax, yMax, zMax]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    lineX = np.array([[xMin, yMax, zMin], [xMin, yMax, zMax]])
+    plot_3D_dots_go(lineX, fig=fig, mode='lines', line={'width': width, 'color': 'black'})
+    per = 0.01
+    fig.update_layout(font_size=24, font_family="Times New Roman", font_color='black',
+                      legend_font_size=20,
+                      showlegend=False,
+
+                      scene=dict(
+                          # annotations=[dict(x=[ 2], y=[-2], z=[-.5], ax=-2, ay=-2), dict(align='left'),
+                          #              dict(align='left')],
+                          xaxis_title=dict(text='x', font=dict(size=26)),
+                          yaxis_title=dict(text='y', font=dict(size=26)),
+                          zaxis_title=dict(text='z', font=dict(size=26)),
+
+                          aspectratio_x=2, aspectratio_y=2, aspectratio_z=2,
+
+                          xaxis=dict(range=[xMin - (xMax - xMin) * per, xMax + (xMax - xMin) * per],
+                                     showticklabels=False, zeroline=False,
+                                     showgrid=False,  # gridcolor='white',
+                                     showbackground=False  # backgroundcolor='white',
+                                     ),
+                          yaxis=dict(range=[yMin - (yMax - yMin) * per, yMax + (yMax - yMin) * per],
+                                     showticklabels=False, zeroline=False,
+                                     showgrid=False,  # gridcolor='white',
+                                     showbackground=False
+                                     ),
+                          zaxis=dict(range=[zMin - (zMax - zMin) * per, zMax + (zMax - zMin) * per],
+                                     showticklabels=False, zeroline=False,
+                                     showgrid=False,  # gridcolor='white',
+                                     showbackground=False
+                                     ), ),  # range=[-0.5, 0.5],
+                      )
+    return fig
+
+
+if __name__ == '__main__':
+    k1 = 80
+    k2 = 70
+    colors = np.array([[255, 255, k1], [255, 127, k1], [255, 0, k1],
+                       [255, k2, 255], [127, k2, 255], [0, k2, 255]]) / 255
+    plt.scatter([0, 1, 2, 0, 1, 2], [0, 0, 0, 1, 1, 1], s=80000, marker='s', c=colors)
+    plt.xlim(-1.1, 1.75)
+    # plt.ylim(-0, 0.8)
+    plt.show()
