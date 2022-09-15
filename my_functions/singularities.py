@@ -214,7 +214,7 @@ def cut_non_oam(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, cir
 
 
 def get_singularities(E, value=1, nonValue=0, bigSingularity=False, axesAll=False, circle=1,
-                      singularities_finder=plane_singularities_finder_4dots):
+                      singularities_finder=plane_singularities_finder_4dots, returnDict=False):
     """
     cut_non_oam simplifier. Just return the array of singularities
     """
@@ -224,6 +224,8 @@ def get_singularities(E, value=1, nonValue=0, bigSingularity=False, axesAll=Fals
         dotsFull, dotsOnly = cut_non_oam(E, value, nonValue, bigSingularity, axesAll, circle,
                                          singularities_finder)
     dots = np.array([list(dots) for (dots, OAM) in dotsOnly.items()])
+    if returnDict:
+        return dotsOnly, dots
     return dots
 
 
