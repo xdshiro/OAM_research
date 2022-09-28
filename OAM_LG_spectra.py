@@ -19,7 +19,7 @@ if __name__ == '__main__':
     file = f'./DATA/OAM_LG_spectra_studying/v1_field_SR_6.000000e-01_num_2.mat'
     beamTurb = fg.reading_file_mat(file, fieldToRead='Efield')[:, :, 0]
 
-    xyMesh = fg.create_mesh_XY(xMax=10, yMax=10, xRes=np.shape(beamTurb)[0], yRes=np.shape(beamTurb)[1])
+    xyMesh = fg.create_mesh_XY_old(xMax=10, yMax=10, xRes=np.shape(beamTurb)[0], yRes=np.shape(beamTurb)[1])
     xyArrays = fg.arrays_from_mesh(xyMesh)
     # beam = bp.LG_combination(*xyMesh, [1, 1, 1], [(1, 0), (2, 0), (3, 0)])
     beamTurbInter = fg.interpolation_complex(beamTurb, *xyArrays)

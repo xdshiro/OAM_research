@@ -6,6 +6,7 @@ from scipy.special import assoc_laguerre
 import my_functions.functions_general as fg
 
 
+
 def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
     """
     Classic LG beam

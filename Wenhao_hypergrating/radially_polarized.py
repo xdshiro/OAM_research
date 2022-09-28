@@ -38,7 +38,7 @@ def LG_radially(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
 if __name__ == '__main__':
     plot_trefoil = True
     if plot_trefoil:
-        xyMesh = fg.create_mesh_XY(4.5, 4.5, 150, 150)
+        xyMesh = fg.create_mesh_XY_old(4.5, 4.5, 150, 150)
         beam = LG_radially(*xyMesh)
         beam = fg.propagator_split_step_3D(beam, dz=1, xArray=None, yArray=None, zSteps=350, n0=1, k0=1)
         pl.plot_2D(np.angle(beam[:, :, -1]), map='Greys')

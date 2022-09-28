@@ -5,6 +5,7 @@ import my_functions.beams_and_pulses as bp
 import numpy as np
 
 if __name__ == '__main__':
+
     plot_trefoil = True
     if plot_trefoil:
         xyzMesh = fg.create_mesh_XYZ(2.1, 2.1, 0.7, 50, 50, 50, zMin=None)

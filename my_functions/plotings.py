@@ -13,8 +13,9 @@ legendFontSize = 20
 
 
 def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vmax=None, title='',
-            ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize,
+            ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize, grid=False,
             axis_equal=False, xlim=None, ylim=None, ax=None, show=True, ijToXY=True, origin='lower',
+            interpolation='bilinear',
             **kwargs):
     fieldToPlot = field
     if ijToXY:
@@ -30,7 +31,7 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
         else:
             fig, ax = plt.subplots(figsize=(8, 6))
     image = plt.imshow(fieldToPlot,
-                       interpolation='bilinear', cmap=map,
+                       interpolation=interpolation, cmap=map,
                        origin=origin, aspect='auto',  # aspect ration of the axes
                        extent=[y[0], y[-1], x[0], x[-1]],
                        vmin=vmin, vmax=vmax, label='sdfsd', **kwargs)
@@ -48,16 +49,17 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     plt.tight_layout()
+    plt.grid(grid)
     if show:
         plt.show()
     return ax
 
 
 def plot_scatter_2D(x, y, xname='', yname='', title='',
-            ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize,
-            axis_equal=False, xlim=None, ylim=None, ax=None, show=True,
-            size=plt.rcParams['lines.markersize'] ** 2, color=None,
-            **kwargs):
+                    ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize,
+                    axis_equal=False, xlim=None, ylim=None, ax=None, show=True,
+                    size=plt.rcParams['lines.markersize'] ** 2, color=None,
+                    **kwargs):
     if ax is None:
         if axis_equal:
             fig, ax = plt.subplots(figsize=(6, 6))

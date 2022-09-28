@@ -87,8 +87,8 @@ def create_mesh_XYZ(xMax, yMax, zMax, xRes=40, yRes=40, zRes=40,
     return np.meshgrid(xArray, yArray, zArray, indexing=indexing, **kwargs)
 
 
-def create_mesh_XY(xMax, yMax, xRes=50, yRes=50,
-                   xMin=None, yMin=None, indexing='ij', **kwargs):
+def create_mesh_XY_old(xMax, yMax, xRes=50, yRes=50,
+                       xMin=None, yMin=None, indexing='ij', **kwargs):
     """
     creating the mesh using np.meshgrid
     :param xMax: [xMin, xMax] are the boundaries for the meshgrid along x
@@ -106,6 +106,22 @@ def create_mesh_XY(xMax, yMax, xRes=50, yRes=50,
         yMin = -yMax
     xArray = np.linspace(xMin, xMax, xRes)
     yArray = np.linspace(yMin, yMax, yRes)
+    return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)
+
+
+def create_mesh_XY(xMinMax, yMinMax, xRes=50, yRes=50,
+                   indexing='ij', **kwargs):
+    """
+    creating the mesh using np.meshgrid
+    :param xMinMax: [xMin, xMax] are the boundaries for the meshgrid along x
+    :param yMinMax: [yMin, yMax] are the boundaries for the meshgrid along y
+    :param xRes: resolution along x
+    :param yRes: resolution along y
+    :param indexing: ij is the classic matrix (0,0) left top
+    :return: mesh
+    """
+    xArray = np.linspace(*xMinMax, xRes)
+    yArray = np.linspace(*yMinMax, yRes)
     return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)
 
 
@@ -336,7 +352,7 @@ if __name__ == '__main__':
 
     xMinMax, yMinMax = 3, 3
     xRes = yRes = 50
-    xyMesh = create_mesh_XY(xMinMax, yMinMax, xRes, yRes)
+    xyMesh = create_mesh_XY_old(xMinMax, yMinMax, xRes, yRes)
     beam = bp.LG_simple(*xyMesh, l=2) + bp.LG_simple(*xyMesh, l=1)
     # fieldFunction[0] + 1j * fieldFunction[1]
     xArray = np.linspace(-xMinMax, xMinMax, xRes)

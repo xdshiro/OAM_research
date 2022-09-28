@@ -196,7 +196,7 @@ def plot_vector_field_2D(*vectorField, mesh=None, show=True, density=1, color=No
         exit()
     if mesh is None:
         shape = np.shape(vectorField[0])
-        mesh = fg.create_mesh_XY(1, 1, shape[0], shape[1], xMin=0, yMin=0, indexing=indexing)
+        mesh = fg.create_mesh_XY_old(1, 1, shape[0], shape[1], xMin=0, yMin=0, indexing=indexing)
 
     absValue = np.sqrt(vectorField[0] ** 2 + vectorField[1] ** 2)
     print(f'max force = {absValue.max()}')
@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     indexing = 'ij'
     xyzMesh = fg.create_mesh_XYZ(xMinMax, yMinMax, zMinMax, xRes, yRes, zRes, indexing=indexing)
-    xyMesh = fg.create_mesh_XY(xMinMax, yMinMax, xRes, yRes, indexing=indexing)
+    xyMesh = fg.create_mesh_XY_old(xMinMax, yMinMax, xRes, yRes, indexing=indexing)
     # print(xyzMesh)
     # modes = [(0, 1), (1, 0)]
     # coeff = [0, 1]
