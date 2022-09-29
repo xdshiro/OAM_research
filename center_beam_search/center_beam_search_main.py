@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.pyplot import polar
 
 
-def LG_spectre_coeff(field, l, p, xM=(-1, 1), yM=(-1, 1), width=1, k0=1, mesh=None):
+def LG_spectre_coeff(field, l, p, xM=(-1, 1), yM=(-1, 1), width=1., k0=1., mesh=None):
     if mesh is None:
         shape = np.shape(field)
         mesh = fg.create_mesh_XY(xMinMax=xM, yMinMax=yM, xRes=shape[0], yRes=shape[1])
@@ -36,7 +36,7 @@ def displacement_deflection(field, mesh, gamma, eta, k=1, **kwargs):
 
 
 def LG_transition_matrix_real_space(operator, l, p, l0, p0, xM=(-1, 1), yM=(-1, 1), shape=(100, 100),
-                                    width=1, k0=1, mesh=None, **kwargs):
+                                    width=1., k0=1., mesh=None, **kwargs):
     if mesh is None:
         mesh = fg.create_mesh_XY(xM, yM, xRes=shape[0], yRes=shape[1])
         dS = ((xM[1] - xM[0]) / (shape[0] - 1)) * ((yM[1] - yM[0]) / (shape[1] - 1))
@@ -76,7 +76,7 @@ def variance_V_helper(Pl, lArray):
 
 def variance_single_transition(field, mesh, r, eta,
                                p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
-                               width=1, k0=1):
+                               width=1., k0=1.):
     p1, p2 = p
     l1, l2 = l
     p01, p02 = p0
@@ -102,7 +102,7 @@ def variance_single_transition(field, mesh, r, eta,
     return V
 
 
-def variance_map(beam, mesh, resolution_V=(4, 4), xBound=(-1, 1), yBound=(-1, 1), width=1, k0=1,
+def variance_map(beam, mesh, resolution_V=(4, 4), xBound=(-1, 1), yBound=(-1, 1), width=1., k0=1.,
                  p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3)):
     V = np.zeros(resolution_V)
 
@@ -119,7 +119,7 @@ def variance_map(beam, mesh, resolution_V=(4, 4), xBound=(-1, 1), yBound=(-1, 1)
     return V
 
 
-def LG_spectrum(beam, l=(-3, 3), p=(0, 5), xM=(-1, 1), yM=(-1, 1), mesh=None, plot=True):
+def LG_spectrum(beam, l=(-3, 3), p=(0, 5), xM=(-1, 1), yM=(-1, 1), width=1., k0=1., mesh=None, plot=True):
     l1, l2 = l
     p1, p2 = p
     spectrum = np.zeros((l2 - l1 + 1, p2 - p1 + 1), dtype=complex)
@@ -127,7 +127,7 @@ def LG_spectrum(beam, l=(-3, 3), p=(0, 5), xM=(-1, 1), yM=(-1, 1), mesh=None, pl
     # modes = []
     for l in np.arange(l1, l2 + 1):
         for p in np.arange(p1, p2 + 1):
-            value = LG_spectre_coeff(beam, l=l, p=p, xM=xM, yM=yM, width=1, k0=1, mesh=mesh)
+            value = LG_spectre_coeff(beam, l=l, p=p, xM=xM, yM=yM, width=width, k0=k0, mesh=mesh)
             # print(l, p, ': ', value, np.abs(value))
             spectrum[l - l1, p] = value
             # if np.abs(value) > 0.5:
@@ -141,6 +141,74 @@ def LG_spectrum(beam, l=(-3, 3), p=(0, 5), xM=(-1, 1), yM=(-1, 1), mesh=None, pl
         plt.xticks(np.arange(l1, l2 + 1))
         plt.show()
     return spectrum
+
+
+def center_beam_finding(beam, mesh, stepXY=None,
+                        p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
+                        width=1, k0=1, x=None, y=None):
+    if stepXY is None:
+        xArray, yArray = fg.arrays_from_mesh(mesh)
+        # print(xArray)
+        stepXY = xArray[1] - xArray[0], yArray[1] - yArray[0]
+    if x is None:
+        xArray, yArray = fg.arrays_from_mesh(mesh)
+        x = xArray[len(xArray) // 2]
+    if y is None:
+        xArray, yArray = fg.arrays_from_mesh(mesh)
+        y = yArray[len(yArray) // 2]
+
+    def search(xFlag):
+        nonlocal x, y, var0
+        varIt = var0
+        signX = 1
+        correctWay = False
+        while True:
+            if xFlag:
+                x = x + signX * stepXY[0]
+            else:
+                y = y + signX * stepXY[1]
+            var = variance_single_transition(beam, mesh=xyMesh, r=fg.rho(x, y), eta=np.angle(x + 1j * y),
+                                             p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
+            print(x, y, var)
+            # if varIt == var:
+            #     break
+            if var < varIt:
+                varIt = var
+                correctWay = True
+            else:
+                if xFlag:
+                    x = x - signX * stepXY[0]
+                else:
+                    y = y - signX * stepXY[1]
+                if correctWay:
+                    break
+                else:
+                    correctWay = True
+                    signX *= -1
+
+            # if varIt == var:
+            #     break
+            # if var > varIt:
+            #     signX *= -1
+            #     if xFlag:
+            #         x = x + signX * stepXY[0]
+            #     else:
+            #         y = y + signX * stepXY[1]
+            # else:
+            #     varIt = var
+        return varIt
+
+    var0 = variance_single_transition(beam, mesh=xyMesh, r=fg.rho(x, y), eta=np.angle(x + 1j * y),
+                                      p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
+    print(f'var0={var0}')
+
+    while True:
+        search(xFlag=True)
+        varXY = search(xFlag=False)
+        if varXY == var0:
+            return -x, -y
+        else:
+            var0 = varXY
 
 
 if __name__ == '__main__':
@@ -158,78 +226,67 @@ if __name__ == '__main__':
                                  width=[1, 1])
 
 
-    xDis = -0.5
-    yDis = 0.7
+    xDis = 0.5
+    yDis = 0.5
     beam_displaced = displacement_lateral(beamF, xyMesh, r_0=fg.rho(xDis, yDis),
                                           eta=np.angle(xDis + 1j * yDis))
     beam = beam_displaced
-    pl.plot_2D(np.abs(beam), x=xB, y=yB)
-    ############ DICTIONARY
-    # LG_spectrum(beam, l=(-3, 3), p=(0, 5), mesh=xyMesh, plot=True)
+    # pl.plot_2D(np.abs(beam), x=xB, y=yB)
+    pl_dict = {'p': (0, 2), 'l': (-3, 4), 'p0': (0, 2), 'l0': (-3, 4)}
 
+
+    def find_width(beam, mesh, widthStep=0.1, l=(-3, 3), p=(0, 5), width=1., k0=1.):
+        minSpec = np.sum(np.abs(LG_spectrum(beam, l=l, p=p, mesh=mesh, width=width, k0=k0, plot=False))**(1/2))
+        correctWay = False
+        direction = +1
+        while True:
+            width += direction * widthStep
+            spec = np.sum(np.abs(LG_spectrum(beam, l=l, p=p, mesh=mesh, width=width, k0=k0, plot=False))**(1/2))
+            print(width, spec)
+            if spec < minSpec:
+                minSpec = spec
+                correctWay = True
+            else:
+                width -= direction * widthStep
+                if correctWay:
+                    break
+                else:
+                    correctWay = True
+                    direction *= -1
+        return width
+
+
+    width = 1.0
+    # width_close = find_width(beam, mesh=xyMesh, widthStep=0.03, l=(-7, 7), p=(0, 7), width=0.5, k0=1.)
+    # print(width_close)
+    # exit()
+    # k0 = 1
+    # spec = LG_spectrum(beam, l=(-3, 3), p=(0, 5), mesh=xyMesh, plot=True, width=width, k0=k0)
+    # print(np.sum(np.abs(spec)))
+    # exit()
     # V = variance_map(beam=beam, mesh=xyMesh,
-    #                  resolution_V=(3, 3), xBound=(-1, 1), yBound=(-1, 1), width=1, k0=1,
-    #                  p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3))
+    #                  resolution_V=(5, 5), xBound=(-1, 1), yBound=(-1, 1),
+    #                  **pl_dict, width=width, k0=k0)
     # print(V)
     # pl.plot_2D(V, x=[-1, 1], y=[-1, 1])
-    x = 0
-    y = 0
+    # exit()
+    #
+    # x = -0.5
+    # y = -0.5
     # print(variance_single_transition(beam, mesh=xyMesh,
     #                                  r=fg.rho(x, y), eta=np.angle(x + 1j * y),
-    #                                  p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
+    #                                  **pl_dict,
     #                                  width=1, k0=1))
+    # x = -0.4
+    # y = -0.4
+    # print(variance_single_transition(beam, mesh=xyMesh,
+    #                                  r=fg.rho(x, y), eta=np.angle(x + 1j * y),
+    #                                  **pl_dict,
+    #                                  width=1, k0=1))
+    #
+    # exit()
 
-
-    def center_beam_finding(beam, mesh, stepXY=None,
-                            p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
-                            width=1, k0=1, x=None, y=None):
-        if stepXY is None:
-            xArray, yArray = fg.arrays_from_mesh(mesh)
-            print(xArray)
-            stepXY = xArray[1] - xArray[0], yArray[1] - yArray[0]
-        if x is None or y is None:
-            xArray, yArray = fg.arrays_from_mesh(mesh)
-            x = xArray[len(xArray) // 2]
-            y = yArray[len(yArray) // 2]
-        var0 = variance_single_transition(beam, mesh=xyMesh, r=fg.rho(x, y), eta=np.angle(x + 1j * y),
-                                          p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
-        print(f'var0={var0}')
-
-        def search(xFlag):
-            nonlocal x, y, var0
-
-            varIt = var0
-            signX = 1
-            while True:
-                if xFlag:
-                    print('x')
-                    x = x + signX * stepXY[0]
-                else:
-                    print('y')
-                    y = y + signX * stepXY[1]
-                print(x, y)
-                var = variance_single_transition(beam, mesh=xyMesh, r=fg.rho(x, y), eta=np.angle(x + 1j * y),
-                                                 p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
-                print(var)
-                if varIt == var:
-                    break
-                if var > varIt:
-                    signX *= -1
-                else:
-                    varIt = var
-                print(x, y, varIt)
-            return varIt
-
-        while True:
-            search(xFlag=True)
-            varXY = search(xFlag=False)
-            if varXY == var0:
-                return -x, -y
-            else:
-                var0 = varXY
-
-
-    print(center_beam_finding(beam, xyMesh))
+    print(center_beam_finding(beam, xyMesh, x=0, y=0, **pl_dict, stepXY=[0.1, 0.1]))
     exit()
 
     check_spectrum = 1
