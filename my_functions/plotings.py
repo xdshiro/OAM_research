@@ -33,7 +33,7 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
     image = plt.imshow(fieldToPlot,
                        interpolation=interpolation, cmap=map,
                        origin=origin, aspect='auto',  # aspect ration of the axes
-                       extent=[y[0], y[-1], x[0], x[-1]],
+                       extent=[x[0], x[-1], y[0], y[-1]],
                        vmin=vmin, vmax=vmax, label='sdfsd', **kwargs)
     cbr = plt.colorbar(image, shrink=0.8, pad=0.02, fraction=0.1)
     cbr.ax.tick_params(labelsize=ticksFontSize)
