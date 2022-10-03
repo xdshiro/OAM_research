@@ -344,7 +344,7 @@ if __name__ == '__main__':
     xyMesh = fg.create_mesh_XY_old(xB[1], yB[1], 50, 50, xMin=xB[0], yMin=yB[0])
 
 
-    def beamF(*xyMesh):
+    def beamF(*xyMesh, **kwargs):
         return bp.LG_combination(*xyMesh,
                                  coefficients=[1, 1],
                                  modes=[(0, 0), (2, 1)],
@@ -372,13 +372,13 @@ if __name__ == '__main__':
     # k0 = 1
     # spec = LG_spectrum(beam, l=(-3, 4), p=(0, 3), mesh=xyMesh, plot=True, width=width, k0=k0)
     # exit()
-    V = variance_map_tilt(beam=beam, mesh=xyMesh,
-                          resolution_V=(20, 20), etaBound=(30 * np.pi / 180, 60 * np.pi / 180),
-                          gammaBound=(-30 * np.pi / 180, 0 * np.pi / 180),
-                          **pl_dict, width=width)
-    print(V)
-    pl.plot_2D(V, x=[30, 60], y=[-30,0])
-    exit()
+    # V = variance_map_tilt(beam=beam, mesh=xyMesh,
+    #                       resolution_V=(20, 20), etaBound=(30 * np.pi / 180, 60 * np.pi / 180),
+    #                       gammaBound=(-30 * np.pi / 180, 0 * np.pi / 180),
+    #                       **pl_dict, width=width)
+    # print(V)
+    # pl.plot_2D(V, x=[30, 60], y=[-30,0])
+    # exit()
     # exit()
     # print(np.sum(np.abs(spec)))
     # exit()
@@ -403,8 +403,8 @@ if __name__ == '__main__':
     #                                  width=1, k0=1))
     #
     # exit()
-
-    # print(center_beam_finding(beam, xyMesh, x=0, y=0, **pl_dict, stepXY=[0.1, 0.1]))
+    x, y = center_beam_finding(beam, xyMesh, x=0, y=0, **pl_dict, stepXY=[0.1, 0.1])
+    print(x, y)
     print(eta * np.pi / 180, gamma * np.pi / 180)
     print(tilt_beam_finding(beam, xyMesh, eta=-30 * np.pi / 180, gamma=-15 * np.pi / 180, **pl_dict, stepEG=[0.05, 0.05]))
     exit()
