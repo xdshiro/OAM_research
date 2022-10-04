@@ -166,7 +166,7 @@ def variance_map_tilt(beam, mesh, displacement_function=displacement_deflection,
         print('Main Coordinate eta: ', i)
         for j, gamma in enumerate(gammaArray):
             print('gamma: ', j)
-            V[i, j] = variance_single_transition(beam, mesh, eta, gamma,
+            V[i, j] = variance_single_transition(beam, mesh, r=eta, eta=gamma,
                                                  displacement_function=displacement_function,
                                                  width=width, k0=k0,
                                                  p=p, l=l, p0=p0, l0=l0)
@@ -249,14 +249,14 @@ def center_beam_finding(beam, mesh, stepXY=None, displacement_function=displacem
         search(xFlag=True)
         varXY = search(xFlag=False)
         if varXY == var0:
-            return -x, -y
+            return x, y
         else:
             var0 = varXY
 
 
 def tilt_beam_finding(beam, mesh, stepEG=None, displacement_function=displacement_deflection,
-                        p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
-                        width=1, k0=1, eta=0, gamma=0):
+                      p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
+                      width=1, k0=1, eta=0., gamma=0.):
     if stepEG is None:
         stepEG = 1, 1
 
@@ -292,15 +292,15 @@ def tilt_beam_finding(beam, mesh, stepEG=None, displacement_function=displacemen
         return varIt
 
     var0 = variance_single_transition(beam, mesh, eta, gamma,
-                                             displacement_function=displacement_function,
-                                             p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
+                                      displacement_function=displacement_function,
+                                      p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
     print(f'var0={var0}')
 
     while True:
         search(etaFlag=True)
         varEG = search(etaFlag=False)
         if varEG == var0:
-            return -eta, -gamma
+            return eta, gamma
         else:
             var0 = varEG
 
@@ -348,7 +348,7 @@ if __name__ == '__main__':
         return bp.LG_combination(*xyMesh,
                                  coefficients=[1, 1],
                                  modes=[(0, 0), (2, 1)],
-                                 width=[1, 1])
+                                 width=[1, 1], x0=0.7, y0=0.5)
 
 
     xDis = 0.5
@@ -357,28 +357,30 @@ if __name__ == '__main__':
     gamma = 20  # degrees
     beam_displaced = displacement_lateral(beamF, xyMesh, r_0=fg.rho(xDis, yDis),
                                           eta=np.angle(xDis + 1j * yDis))
-    beam = beam_displaced
+    # beam = beam_displaced
     beam_tilted = displacement_deflection(beamF, xyMesh,
                                           eta=eta * np.pi / 180, gamma=gamma * np.pi / 180)
-    # beam = beam_tilted
-    # pl.plot_2D(np.angle(beam), x=xB, y=yB)
-    pl_dict = {'p': (0, 3), 'l': (-3, 4), 'p0': (0, 3), 'l0': (-3, 4)}
+    beam = beam_tilted
+    pl.plot_2D(np.angle(beam), x=xB, y=yB)
+    # exit()
+    pl_dict = {'p': (0, 4), 'l': (-4, 5), 'p0': (0, 4), 'l0': (-4, 5)}
 
     width = 1.0
     k0 = 1
+    spec = LG_spectrum(beam, l=(-4, 5), p=(0, 4), mesh=xyMesh, plot=True, width=width, k0=k0)
     # width_close = find_width(beam, mesh=xyMesh, widthStep=0.03, l=(-7, 7), p=(0, 7), width=0.5, k0=1.)
     # print(width_close)
     # exit()
     # k0 = 1
     # spec = LG_spectrum(beam, l=(-3, 4), p=(0, 3), mesh=xyMesh, plot=True, width=width, k0=k0)
     # exit()
-    # V = variance_map_tilt(beam=beam, mesh=xyMesh,
-    #                       resolution_V=(20, 20), etaBound=(30 * np.pi / 180, 60 * np.pi / 180),
-    #                       gammaBound=(-30 * np.pi / 180, 0 * np.pi / 180),
-    #                       **pl_dict, width=width)
-    # print(V)
-    # pl.plot_2D(V, x=[30, 60], y=[-30,0])
-    # exit()
+    V = variance_map_tilt(beam=beam, mesh=xyMesh,
+                          resolution_V=(5, 5), etaBound=(30 * np.pi / 180, 60 * np.pi / 180),
+                          gammaBound=(-30 * np.pi / 180, 0 * np.pi / 180),
+                          **pl_dict, width=width)
+    print(V)
+    pl.plot_2D(V, x=[30, 60], y=[-30,0])
+    exit()
     # exit()
     # print(np.sum(np.abs(spec)))
     # exit()
@@ -403,10 +405,11 @@ if __name__ == '__main__':
     #                                  width=1, k0=1))
     #
     # exit()
-    x, y = center_beam_finding(beam, xyMesh, x=0, y=0, **pl_dict, stepXY=[0.1, 0.1])
-    print(x, y)
+    # x, y = center_beam_finding(beam, xyMesh, x=0, y=0, **pl_dict, stepXY=[0.1, 0.1])
+    # print(x, y)
     print(eta * np.pi / 180, gamma * np.pi / 180)
-    print(tilt_beam_finding(beam, xyMesh, eta=-30 * np.pi / 180, gamma=-15 * np.pi / 180, **pl_dict, stepEG=[0.05, 0.05]))
+    print(
+        tilt_beam_finding(beam, xyMesh, eta=0 * np.pi / 180, gamma=0 * np.pi / 180, **pl_dict, stepEG=[0.1, 0.1]))
     exit()
 
     check_spectrum = 1
