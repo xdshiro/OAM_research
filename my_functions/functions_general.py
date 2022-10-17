@@ -109,7 +109,7 @@ def create_mesh_XY_old(xMax, yMax, xRes=50, yRes=50,
     return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)
 
 
-def create_mesh_XY(xMinMax, yMinMax, xRes=50, yRes=50,
+def create_mesh_XY(xMinMax=None, yMinMax=None, xRes=50, yRes=50,
                    indexing='ij', **kwargs):
     """
     creating the mesh using np.meshgrid
@@ -120,6 +120,10 @@ def create_mesh_XY(xMinMax, yMinMax, xRes=50, yRes=50,
     :param indexing: ij is the classic matrix (0,0) left top
     :return: mesh
     """
+    if xMinMax is None:
+        xMinMax = (0-xRes//2, 0+xRes//2)
+    if yMinMax is None:
+        yMinMax = (0-yRes//2, 0+yRes//2)
     xArray = np.linspace(*xMinMax, xRes)
     yArray = np.linspace(*yMinMax, yRes)
     return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)

@@ -558,7 +558,7 @@ def dots_dens_reduction(dots, checkValue, checkNumber=3):
 #         shape = np.shape(self.field3D)
 #         self.plot_plane_2D(shape[2] // 2, **kwargs)
 #
-#     def plot_dots(self, show=True, **kwargs):
+#     def plotDots(self, show=True, **kwargs):
 #         """
 #         Plot self.dots (scatter) using fOAM.plot_knot_dots()
 #         if self.dots is not initialized, initialization with self.fill_dotsDict_from_field3D()
