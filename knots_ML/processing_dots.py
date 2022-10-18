@@ -7,7 +7,7 @@ import pickle
 
 
 def buildSaveTrefoil():
-    xyzMesh = fg.create_mesh_XYZ(2.1, 2.1, 0.7, 50, 50, 50, zMin=None)
+    xyzMesh = fg.create_mesh_XYZ(2.1, 2.1, 0.7, 40, 40, 40, zMin=None)
     beam = bp.LG_combination(*xyzMesh,
                              coefficients=[1.71, -5.66, 6.38, -2.30, -4.36],
                              modes=[(0, 0), (0, 1), (0, 2), (0, 3), (3, 0)],
@@ -60,6 +60,31 @@ def neighboursDots(x_c, y_c, z_c, dots_dict):
     return count, dots
 
 
+def filterOneNeighbours(dots_dict):
+    """
+    Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
+    too sharp. All the good dots are removed from dots_dict (using the shallow copy)
+    :param dots_dict: dictionary with all the dots
+    :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
+    """
+    new_dots = []
+    dots_problem = []
+    for dot in dots_dict:
+        count, dots = neighboursDots(*dot, dots_dict)
+        if count == 2:
+            print(f'problem dot {dot}, (removed) (filterOneNeighbours)')
+            dots_problem.append(dot)
+    # removing dots which are definitely separated from other algorithms
+    # and are definitely good and viable
+    for dot in dots_problem:
+        dots_dict.pop(dot)
+    # for dot in new_dots:
+    #     count, dots = neighboursDots(*dot, new_dots)
+    #     if count == 3:
+    #         dots_dict.pop(dot)
+    return np.array(new_dots), np.array(dots_problem)
+
+
 def filterTwoNeighbours(dots_dict):
     """
     Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
@@ -67,22 +92,26 @@ def filterTwoNeighbours(dots_dict):
     :param dots_dict: dictionary with all the dots
     :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
     """
-    new_dots = [(0, 0, 0)]
+    new_dots = []
+    dots_problem = []
     for dot in dots_dict:
         count, dots = neighboursDots(*dot, dots_dict)
         if count == 3:
             check = np.sum(dots, axis=0) / 3 - dot
             if np.sum(np.abs(check)) > 1:
-                print(f'problem dot {dot}, trajectory {check} (filterTwoNeighbours)')
-                continue
-            new_dots.append(dot)
+                print(f'problem dot {dot}, trajectory {check} (removed) (filterTwoNeighbours)')
+                dots_problem.append(dot)
+            else:
+                new_dots.append(dot)
     # removing dots which are definitely separated from other algorithms
     # and are definitely good and viable
+    for dot in dots_problem:
+        dots_dict.pop(dot)
     for dot in new_dots:
         count, dots = neighboursDots(*dot, new_dots)
         if count == 3:
             dots_dict.pop(dot)
-    return np.array(new_dots)
+    return np.array(new_dots), np.array(dots_problem)
 
 
 def filterThreeNeighbours(dots_dict):
@@ -93,6 +122,7 @@ def filterThreeNeighbours(dots_dict):
     :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
     """
     new_dots = [(0, 0, 0)]
+    dots_problem = []
     for dot in dots_dict:
         count, dots = neighboursDots(*dot, dots_dict)
         if count == 4:
@@ -102,21 +132,34 @@ def filterThreeNeighbours(dots_dict):
             #     print(f'problem dot {dot}, trajectory {check} (filterTwoNeighbours)')
             #     continue
             new_dots.append(dot)
-    надо убедиться, что в паре обе точки не имеют соседей
+    # надо убедиться, что в паре обе точки не имеют соседей
     new_dots_pairs = set()
+    new_dots_pairs_temp = set()
+    dots_to_remove = []
     for dot in new_dots:
         count, dots = neighboursDots(*dot, new_dots)
         if count == 2:
-            new_dots_pairs.add(tuple(np.sum(dots, axis=0) / 2))
-            dots_dict.pop(dot)
-            # dots_dict.pop(new_dots)
-            # for dot_d in dots:
-            #     print(dot_d)
-            #     dots_dict.pop(dot_d)
-
-
+            count_dot2, dots3 = neighboursDots(*(dots[dots.index(dot) - 1]), new_dots)
+            if count_dot2 == 2:
+                new_dots_pairs.add(tuple(np.sum(dots, axis=0) / 2))
+                dots_to_remove.append(dot)
+                # dots_dict.pop(dot)
+                # new_dots.remove(dot)
+            elif count_dot2 == 3:
+                print(dot, dots3)
+                new_dots_pairs_temp.add(tuple(np.sum(dots3, axis=0) / 3))
+                for dot_ in dots3:
+                    dots_to_remove.append(dot_)
+                # dots_dict.pop(dot)
+                # new_dots.remove(dot)
+    new_dots = []
+    for dot in dots_to_remove:
+        dots_dict.pop(dot)
+    for dot in set.union(new_dots_pairs, new_dots_pairs_temp):
+        new_dots.append(dot)
     # return np.array(list(new_dots_pairs))
-    return np.array(list(new_dots))
+    # return np.array(list(new_dots_pairs_temp)), np.array(dots_problem)
+    return np.array(list(new_dots)), np.array(dots_problem)
 
 
 def globalFilterDots(dots_dict):
@@ -129,13 +172,12 @@ def globalFilterDots(dots_dict):
     dots_dict_copy = copy.deepcopy(dots_dict)
     print(len(dots_dict_copy))
     dots_final = []
-    dots_final = [filterTwoNeighbours(dots_dict_copy)]
-    # dots_final.append(filterTwoNeighbours(dots_dict_copy))
+    dots_final.append(filterOneNeighbours(dots_dict_copy)[0])
     print(len(dots_dict_copy))
-    dots_final.append(filterThreeNeighbours(dots_dict_copy))
+    dots_final.append(filterTwoNeighbours(dots_dict_copy)[0])
     print(len(dots_dict_copy))
-    # dots_final.pop(0)
-    # print(dots_dict_copy)
+    dots_final.append(filterThreeNeighbours(dots_dict_copy)[0])
+    print(len(dots_dict_copy))
     return dots_final, dots_dict_copy
 
 
@@ -181,15 +223,17 @@ def globalFilterDots(dots_dict):
 # exit()
 
 if __name__ == '__main__':
-    # buildSaveTrefoil()
+    buildSaveTrefoil()
     dots, dots_dict = loadDots()
     dots_final, dots_left = globalFilterDots(dots_dict)
     # print(dots_final)
     # exit()
-    fig = plotDots(dots, dots, color='red', show=False)
-    plotDots(np.array(list(dots_left)), dots, color='black', show=False, fig=fig)
-    plotDots(dots_final[1], dots, color='blue', show=False, fig=fig)
-    plotDots(dots_final[0], dots, color='black', fig=fig)
+    fig = plotDots(np.array(list(dots_left)), dots, color='black', show=False)
+    # fig = plotDots(dots, dots, color='black', show=False)
+    # plotDots(np.array(list(dots_left)), dots, color='red', show=False, fig=fig)
+    # plotDots(dots_final[1], dots, color='blue', show=False, fig=fig)
+    # plotDots(dots_final[0], dots, color='blue', show=False, fig=fig)
+    fig.show()
     plot_trefoil = False
     if plot_trefoil:
 
