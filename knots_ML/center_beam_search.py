@@ -33,7 +33,7 @@ def displacement_deflection(field_func, mesh, eta, gamma, k=1, **kwargs):
     return field_func(*mesh, **kwargs) * field_change
 
 
-def removeTilt(field, mesh, eta, gamma, k=1, ):
+def removeTilt(field, mesh, eta, gamma, k=1):
     field_change = np.exp(1j * k * fg.rho(*mesh) * np.sin(gamma) * np.cos(fg.phi(*mesh) - eta))
     return field * field_change
 

@@ -16,7 +16,7 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
             ticksFontSize=ticksFontSize, xyLabelFontSize=xyLabelFontSize, grid=False,
             axis_equal=False, xlim=None, ylim=None, ax=None, show=True, ijToXY=True, origin='lower',
             interpolation='bilinear',
-            **kwargs):
+            **kwargs) -> object:
     fieldToPlot = field
     if ijToXY:
         origin = 'lower'
@@ -30,12 +30,12 @@ def plot_2D(field, x=None, y=None, xname='', yname='', map='jet', vmin=None, vma
             fig, ax = plt.subplots(figsize=(6, 6))
         else:
             fig, ax = plt.subplots(figsize=(8, 6))
-    image = plt.imshow(fieldToPlot,
+    image = ax.imshow(fieldToPlot,
                        interpolation=interpolation, cmap=map,
                        origin=origin, aspect='auto',  # aspect ration of the axes
                        extent=[x[0], x[-1], y[0], y[-1]],
                        vmin=vmin, vmax=vmax, label='sdfsd', **kwargs)
-    cbr = plt.colorbar(image, shrink=0.8, pad=0.02, fraction=0.1)
+    cbr = plt.colorbar(image, ax=ax, shrink=0.8, pad=0.02, fraction=0.1)
     cbr.ax.tick_params(labelsize=ticksFontSize)
     plt.xticks(fontsize=ticksFontSize)
     plt.yticks(fontsize=ticksFontSize)

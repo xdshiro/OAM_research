@@ -154,7 +154,7 @@ def interpolation_real(field, xArray=None, yArray=None, **kwargs):
 
 
 # function interpolate complex 2D array of any data into the function(x, y)
-def interpolation_complex(field, xArray=None, yArray=None, fill_value=False):
+def interpolation_complex(field, xArray=None, yArray=None, mesh=None, fill_value=False):
     """
     function interpolate complex 2D array of any data into the function(x, y)
     :param field: initial complex 2D array
@@ -162,6 +162,8 @@ def interpolation_complex(field, xArray=None, yArray=None, fill_value=False):
     :param yArray: y interval (range)
     :return: Real CloughTocher2DInterpolator, Imag CloughTocher2DInterpolator
     """
+    if mesh is not None:
+        xArray, yArray = arrays_from_mesh(mesh)
     fieldReal = np.real(field)
     fieldImag = np.imag(field)
     real = interpolation_real(fieldReal, xArray, yArray, fill_value=fill_value)
@@ -314,6 +316,40 @@ def propagator_split_step_3D(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, 
         fieldReturn[:, :, k] = fieldReturn[:, :, k] * np.exp(nonlinearity_spec(fieldReturn[:, :, k]))
 
     return fieldReturn
+
+
+
+def propagator_split_step_3D_linear(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, k0=1):
+    if xArray is None:
+        xArray = np.array(range(np.shape(E)[0]))
+    if yArray is None:
+        yArray = np.array(range(np.shape(E)[1]))
+    xResolution, yResolution = len(xArray), len(yArray)
+    zResolution = zSteps + 1
+    intervalX = xArray[-1] - xArray[0]
+    intervalY = yArray[-1] - yArray[0]
+    if xResolution // 2 == 1:
+        kxArray = np.linspace(-1. * np.pi * (xResolution - 2) / intervalX,
+                              1. * np.pi * (xResolution - 2) / intervalX, xResolution)
+        kyArray = np.linspace(-1. * np.pi * (yResolution - 2) / intervalY,
+                              1. * np.pi * (yResolution - 2) / intervalY, yResolution)
+    else:
+        kxArray = np.linspace(-1. * np.pi * (xResolution - 0) / intervalX,
+                              1. * np.pi * (xResolution - 2) / intervalX, xResolution)
+        kyArray = np.linspace(-1. * np.pi * (yResolution - 0) / intervalY,
+                              1. * np.pi * (yResolution - 2) / intervalY, yResolution)
+
+    KxyMesh = np.array(np.meshgrid(kxArray, kyArray, indexing='ij'))
+    fieldReturn = np.zeros((xResolution, yResolution, zResolution), dtype=complex)
+    fieldReturn[:, :, 0] = np.fft.fftshift(np.fft.fftn(E))
+    for k in range(1, zResolution):
+        fieldReturn[:, :, k] = (fieldReturn[:, :, k-1] *
+                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[0] ** 2) *
+                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[1] ** 2))
+        fieldReturn[:, :, k-1] = np.fft.ifftn(np.fft.ifftshift(fieldReturn[:, :, k-1]))
+    fieldReturn[:, :, -1] = np.fft.ifftn(np.fft.ifftshift(fieldReturn[:, :, -1]))
+    return fieldReturn
+
 
 
 def one_plane_propagator(fieldPlane, dz, stepsNumber, n0=1, k0=1):  # , shapeWrong=False

@@ -27,13 +27,13 @@ def loadDots():
     return dots, dots_dict
 
 
-def plotDots(dots, dots_bound, show=True, color='black', fig=None):
+def plotDots(dots, dots_bound, show=True, color='black', size=15, width=185, fig=None):
     if fig is None:
-        fig = pl.plot_3D_dots_go(dots, marker={'size': 15, 'color': color,
-                                               'line': dict(width=185, color='white')})
+        fig = pl.plot_3D_dots_go(dots, marker={'size': size, 'color': color,
+                                               'line': dict(width=width, color='white')})
     else:
-        pl.plot_3D_dots_go(dots, fig=fig, marker={'size': 15, 'color': color,
-                                                  'line': dict(width=185, color='white')})
+        pl.plot_3D_dots_go(dots, fig=fig, marker={'size': size, 'color': color,
+                                                  'line': dict(width=width, color='white')})
     pl.box_set_go(fig, mesh=None, autoDots=dots_bound, perBox=0.05)
     if show:
         fig.show()
@@ -60,7 +60,7 @@ def neighboursDots(x_c, y_c, z_c, dots_dict):
     return count, dots
 
 
-def filterOneNeighbours(dots_dict):
+def filter_OneNeighbours(dots_dict):
     """
     Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
     too sharp. All the good dots are removed from dots_dict (using the shallow copy)
@@ -85,7 +85,7 @@ def filterOneNeighbours(dots_dict):
     return np.array(new_dots), np.array(dots_problem)
 
 
-def filterTwoNeighbours(dots_dict):
+def filter_TwoNeighbours(dots_dict):
     """
     Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
     too sharp. All the good dots are removed from dots_dict (using the shallow copy)
@@ -94,6 +94,7 @@ def filterTwoNeighbours(dots_dict):
     """
     new_dots = []
     dots_problem = []
+    dots_to_remove = []
     for dot in dots_dict:
         count, dots = neighboursDots(*dot, dots_dict)
         if count == 3:
@@ -102,19 +103,22 @@ def filterTwoNeighbours(dots_dict):
                 print(f'problem dot {dot}, trajectory {check} (removed) (filterTwoNeighbours)')
                 dots_problem.append(dot)
             else:
+                dots_to_remove.append(dot)
                 new_dots.append(dot)
     # removing dots which are definitely separated from other algorithms
     # and are definitely good and viable
     for dot in dots_problem:
         dots_dict.pop(dot)
-    for dot in new_dots:
-        count, dots = neighboursDots(*dot, new_dots)
-        if count == 3:
-            dots_dict.pop(dot)
+    for dot in dots_to_remove:
+        dots_dict.pop(dot)
+    # for dot in new_dots:
+    #     count, dots = neighboursDots(*dot, new_dots)
+    #     if count == 3:
+    #         dots_dict.pop(dot)
     return np.array(new_dots), np.array(dots_problem)
 
 
-def filterThreeNeighbours(dots_dict):
+def filter_ThreeNeighbours(dots_dict):
     """
     Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
     too sharp. All the good dots are removed from dots_dict (using the shallow copy)
@@ -129,7 +133,7 @@ def filterThreeNeighbours(dots_dict):
             # print(f'{np.sum(dots, axis=0) / 4 - dot}, dot {dot}')
             # check = np.sum(dots, axis=0) / 3 - dot
             # if np.sum(np.abs(check)) > 1:
-            #     print(f'problem dot {dot}, trajectory {check} (filterTwoNeighbours)')
+            #     print(f'problem dot {dot}, trajectory {check} (filter_TwoNeighbours)')
             #     continue
             new_dots.append(dot)
     # надо убедиться, что в паре обе точки не имеют соседей
@@ -162,6 +166,232 @@ def filterThreeNeighbours(dots_dict):
     return np.array(list(new_dots)), np.array(dots_problem)
 
 
+def filter_PlaneThreeClusters(dots_dict):
+    """
+    Algorithm finds all 3 clusters in planes and return an average dot.
+    0000
+    0**0
+    0*00
+    0000
+    All the good dots are removed from dots_dict (using the shallow copy)
+    :param dots_dict: dictionary with all the dots
+    :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
+    """
+
+    def neighbours_InPlaneFourDots(x_c, y_c, z_c, dots_dict, direction):
+        """
+        Algorithm finds all dots in 2x2 plane around the dot, return their count and the dots themselves
+        00
+        *0
+        :param x_c: (X, y, z) - dot, which neighbours are explored
+        :param y_c: (x, Y, z) - dot, which neighbours are explored
+        :param z_c: (x, Y, z) - dot, which neighbours are explored
+        :param dots_dict: dictionary with all the dots
+        :return: number of dots in the square 3x3x3 with the array of dots in it
+        """
+        count = 0
+        dots = []
+        if direction == 'z':
+            for x_ in [x_c, x_c + 1]:
+                for y_ in [y_c, y_c + 1]:
+                    if (x_, y_, z_c) in dots_dict:
+                        count += 1
+                        dots.append((x_, y_, z_c))
+        elif direction == 'y':
+            for x_ in [x_c, x_c + 1]:
+                for z_ in [z_c, z_c + 1]:
+                    if (x_, y_c, z_) in dots_dict:
+                        count += 1
+                        dots.append((x_, y_c, z_))
+        elif direction == 'x':
+            for z_ in [z_c, z_c + 1]:
+                for y_ in [y_c, y_c + 1]:
+                    if (x_c, y_, z_) in dots_dict:
+                        count += 1
+                        dots.append((x_c, y_, z_))
+        return count, dots
+
+    def planeEmptyCheck_helper(x_c, y_c, z_c, dots_dict, direction):
+        """
+        Algorithm checks if there are any neighbours in 4x4 plane around the dot 2x2 dot
+        0000
+        0**0
+        0**0
+        0000 - TRUE
+        :param x_c: (X, y, z) - dot, which neighbours are explored
+        :param y_c: (x, Y, z) - dot, which neighbours are explored
+        :param z_c: (x, Y, z) - dot, which neighbours are explored
+        :param dots_dict: dictionary with all the dots
+        :return: True if the area is clear
+        """
+
+        def boundary_square_44(a, b):
+            return [(a - 1, b - 1), (a - 1, b), (a - 1, b + 1), (a - 1, b + 2),
+                    (a, b + 2), (a + 1, b + 2), (a + 2, b + 2),
+                    (a + 2, b + 1), (a + 2, b), (a + 2, b - 1),
+                    (a + 1, b - 1), (a, b - 1)]
+
+        if direction == 'z':
+            for x_, y_ in boundary_square_44(x_c, y_c):
+                if (x_, y_, z_c) in dots_dict:
+                    return False
+        elif direction == 'y':
+            for x_, z_ in boundary_square_44(x_c, z_c):
+                if (x_, y_c, z_) in dots_dict:
+                    return False
+        elif direction == 'x':
+            for z_, y_ in boundary_square_44(z_c, y_c):
+                if (x_c, y_, z_) in dots_dict:
+                    return False
+
+        return True
+
+    new_dots = []
+    dots_problem = []
+    dots_to_remove = []
+    for dot in dots_dict:
+        # z
+        count, dots = neighbours_InPlaneFourDots(*dot, dots_dict, direction='z')
+        if count == 3:
+            if planeEmptyCheck_helper(*dot, dots_dict, direction='z'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 3))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+        # y
+        count, dots = neighbours_InPlaneFourDots(*dot, dots_dict, direction='y')
+        if count == 3:
+            if planeEmptyCheck_helper(*dot, dots_dict, direction='y'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 3))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+        # x
+        count, dots = neighbours_InPlaneFourDots(*dot, dots_dict, direction='x')
+        if count == 3:
+            if planeEmptyCheck_helper(*dot, dots_dict, direction='x'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 3))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+    for dot in set(dots_to_remove):
+        dots_dict.pop(dot)
+    return np.array(new_dots), np.array(dots_problem)
+
+
+def filter_PlaneTwoClusters(dots_dict):
+    """
+    Algorithm finds all 2 horizontal cluster in 3 planes and return average dots.
+    Verticals are included since they are horizontal in z-planes.
+    0000
+    0**0
+    0000
+    All the good dots are removed from dots_dict (using the shallow copy)
+    :param dots_dict: dictionary with all the dots
+    :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
+    """
+
+    def neighbours_InPlaneTwoDots(x_c, y_c, z_c, dots_dict, direction):
+        """
+        Algorithm finds all dots in 2x2 plane around the dot, return their count and the dots themselves
+        00
+        *0
+        :param x_c: (X, y, z) - dot, which neighbours are explored
+        :param y_c: (x, Y, z) - dot, which neighbours are explored
+        :param z_c: (x, Y, z) - dot, which neighbours are explored
+        :param dots_dict: dictionary with all the dots
+        :return: number of dots in the square 3x3x3 with the array of dots in it
+        """
+        count = 0
+        dots = []
+        if direction == 'x':
+            for x_ in [x_c, x_c + 1]:
+                if (x_, y_c, z_c) in dots_dict:
+                    count += 1
+                    dots.append((x_, y_c, z_c))
+        elif direction == 'y':
+            for y_ in [y_c, y_c + 1]:
+                if (x_c, y_, z_c) in dots_dict:
+                    count += 1
+                    dots.append((x_c, y_, z_c))
+        elif direction == 'z':
+            for z_ in [z_c, z_c + 1]:
+                if (x_c, y_c, z_) in dots_dict:
+                    count += 1
+                    dots.append((x_c, y_c, z_))
+        return count, dots
+
+    def planeEmptyCheck_helper_twoDots(x_c, y_c, z_c, dots_dict, direction):
+        """
+        Algorithm checks if there are any neighbours in 3x4 plane around the dots 2x1
+        0000
+        0**0
+        0000 - TRUE
+        :param x_c: (X, y, z) - dot, which neighbours are explored
+        :param y_c: (x, Y, z) - dot, which neighbours are explored
+        :param z_c: (x, Y, z) - dot, which neighbours are explored
+        :param dots_dict: dictionary with all the dots
+        :return: True if the area is clear
+        """
+
+        def boundary_square_34(a, b):
+            return [(a - 1, b - 1), (a - 1, b), (a - 1, b + 1),
+                    (a, b + 1), (a + 1, b + 1),
+                    (a + 1, b), (a + 1, b - 1),
+                    (a, b - 1)]
+
+        if direction == 'x':
+            for x_, y_ in boundary_square_34(x_c, y_c):
+                if (x_, y_, z_c) in dots_dict:
+                    for x__, z__ in boundary_square_34(x_c, z_c):
+                        if (x__, y_c, z__) in dots_dict:
+                            return False
+        elif direction == 'y':
+            for y_, x_ in boundary_square_34(y_c, x_c):
+                if (x_, y_, z_c) in dots_dict:
+                    for y__, z__ in boundary_square_34(y_c, z_c):
+                        if (x_c, y__, z__) in dots_dict:
+                            return False
+        elif direction == 'z':
+            for z_, x_ in boundary_square_34(z_c, x_c):
+                if (x_, y_c, z_) in dots_dict:
+                    for x__, y__ in boundary_square_34(z_c, y_c):
+                        if (x__, y__, z_c) in dots_dict:
+                            return False
+
+        return True
+
+    new_dots = []
+    dots_problem = []
+    dots_to_remove = []
+    for dot in dots_dict:
+        # z
+        count, dots = neighbours_InPlaneTwoDots(*dot, dots_dict, direction='z')
+        if count == 2:
+            if planeEmptyCheck_helper_twoDots(*dot, dots_dict, direction='z'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 2))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+        # y
+        count, dots = neighbours_InPlaneTwoDots(*dot, dots_dict, direction='y')
+        if count == 2:
+            if planeEmptyCheck_helper_twoDots(*dot, dots_dict, direction='y'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 2))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+        # x
+        count, dots = neighbours_InPlaneTwoDots(*dot, dots_dict, direction='x')
+        if count == 2:
+            if planeEmptyCheck_helper_twoDots(*dot, dots_dict, direction='x'):
+                new_dots.append(tuple(np.sum(dots, axis=0) / 2))
+                for dot_ in dots:
+                    dots_to_remove.append(dot_)
+    for dot in set(dots_to_remove):
+        dots_dict.pop(dot)
+    return np.array(new_dots), np.array(dots_problem)
+
+
+def filter_PlaneTwoClusters_Vertical(dots_dict):
+    pass
+
+
 def globalFilterDots(dots_dict):
     """
     Applaying all the filters to the dictionary of dots
@@ -170,15 +400,32 @@ def globalFilterDots(dots_dict):
     """
     import copy
     dots_dict_copy = copy.deepcopy(dots_dict)
-    print(len(dots_dict_copy))
     dots_final = []
-    dots_final.append(filterOneNeighbours(dots_dict_copy)[0])
-    print(len(dots_dict_copy))
-    dots_final.append(filterTwoNeighbours(dots_dict_copy)[0])
-    print(len(dots_dict_copy))
-    dots_final.append(filterThreeNeighbours(dots_dict_copy)[0])
-    print(len(dots_dict_copy))
+    print('raw: ', len(dots_dict_copy))
+    dots_final.append(filter_OneNeighbours(dots_dict_copy)[0])
+    print('0. one neighbour: ', len(dots_dict_copy))
+    dots_final.append(filter_TwoNeighbours(dots_dict_copy)[0])
+    print('1. two neighbours: ', len(dots_dict_copy))
+    dots_final.append(filter_ThreeNeighbours(dots_dict_copy)[0])
+    print('2. three neighbours: ', len(dots_dict_copy))
+    dots_final.append(filter_PlaneThreeClusters(dots_dict_copy)[0])
+    print('3. plane 3 dots: ', len(dots_dict_copy))
+    dots_final.append(filter_PlaneTwoClusters(dots_dict_copy)[0])
+    print('4. plane 2 dots: ', len(dots_dict_copy))
     return dots_final, dots_dict_copy
+
+
+def filtered_dots(dots_dict):
+    dots_final, dots_left = globalFilterDots(dots_dict)
+    dots_final_combined = []
+    for dots_arrays in dots_final:
+        if len(dots_arrays) != 0:
+            for dot in dots_arrays:
+                dots_final_combined.append(dot)
+    for dot in dots_left:
+        dots_final_combined.append(dot)
+    dots_final_combined = np.array(dots_final_combined)
+    return dots_final_combined
 
 
 # def one_plane_propagator(fieldPlane, dz, stepsNumber, n0=1, k0=1):  # , shapeWrong=False
@@ -226,13 +473,16 @@ if __name__ == '__main__':
     buildSaveTrefoil()
     dots, dots_dict = loadDots()
     dots_final, dots_left = globalFilterDots(dots_dict)
-    # print(dots_final)
+    dots_final_combined = filtered_dots(dots_dict)
+    # print(dots_final_combined)
     # exit()
-    fig = plotDots(np.array(list(dots_left)), dots, color='black', show=False)
-    # fig = plotDots(dots, dots, color='black', show=False)
+    # fig = plotDots(np.array(list(dots_left)), dots, color='black', show=False)
+    fig = plotDots(dots_final_combined, dots, color='blue', show=False, size=20)
+    # fig = plotDots(dots, dots, color='Black', show=False, size=20)
     # plotDots(np.array(list(dots_left)), dots, color='red', show=False, fig=fig)
     # plotDots(dots_final[1], dots, color='blue', show=False, fig=fig)
     # plotDots(dots_final[0], dots, color='blue', show=False, fig=fig)
+    # plotDots(dots_final[4], dots, color='blue', show=False, fig=fig)
     fig.show()
     plot_trefoil = False
     if plot_trefoil:

@@ -256,7 +256,7 @@ def Jz_calc_no_conj(EArray, xArray=None, yArray=None):
         yArray = np.arange(shape[1])
     x0 = (xArray[-1] + xArray[0]) / 2
     y0 = (yArray[-1] + yArray[0]) / 2
-    x = np.array(xArray) - x0
+    x = np.array(xArray) - x0 + 500
     y = np.array(yArray) - y0
     dx = xArray[1] - xArray[0]
     dy = yArray[1] - yArray[0]
@@ -275,6 +275,7 @@ def Jz_calc_no_conj(EArray, xArray=None, yArray=None):
             #           x[i] * Ei[i, j] * dEry, + y[j] * Ei[i, j] * dErx)
             sumJz += (x[i] * Er[i, j] * dEiy - y[j] * Er[i, j] * dEix -
                       x[i] * Ei[i, j] * dEry + y[j] * Ei[i, j] * dErx)
+            print(Er[i, j] * dEiy - Ei[i, j] * dEry)
     # Total moment
     Jz = (sumJz * dx * dy)
     W = W_energy(EArray)
