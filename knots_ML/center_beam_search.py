@@ -314,7 +314,7 @@ def beamFullCenter(beam, mesh, stepEG=None, stepXY=None, displacement_function=s
 
 
 
-def find_width(beam, mesh, widthStep=0.1, l=(-5, 5), p=(0, 5), width=1., k0=1.):
+def find_width(beam, mesh, widthStep=0.1, l=(-5, 5), p=(0, 5), width=1., k0=1., print_steps=True):
     """
     this function finds the approximate beam waste (any position, any beam=sum(LG))
     :param mesh: mesh is required to have a scale of the beam => correct width scale
@@ -331,7 +331,8 @@ def find_width(beam, mesh, widthStep=0.1, l=(-5, 5), p=(0, 5), width=1., k0=1.):
     while True:
         width += direction * widthStep
         spec = np.sum(np.abs(LG_spectrum(beam, l=l, p=p, mesh=mesh, width=width, k0=k0, plot=False)) ** (1 / 2))
-        print(width, spec)
+        if print_steps:
+            print(width, spec)
         if spec < minSpec:
             minSpec = spec
             correctWay = True
