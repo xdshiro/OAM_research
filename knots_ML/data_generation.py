@@ -1,11 +1,25 @@
 """
+This script reads the field from mat file and produces all the necessary pre-processing procedures, and
+creates a 3D array of singularity dots.
 
+First main function is main_field_processing:
+    1) reading the field from matlab file
+    2) converting it into numpy array
+    3) normalizing
+    4) finding the beam waste
+    5) rescaling the field, using the interpolation, for faster next steps
+    6) finding the beam center
+    7) rescaling field to the scale we want for 3D calculations
+    8) removing the tilt and shift
+
+Second main function is !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
 import my_functions.functions_general as fg
 # import importlib
 # importlib.reload(fg)
 import my_functions.singularities as sing
 import my_functions.beams_and_pulses as bp
+import math
 import numpy as np
 import scipy.io as sio
 import knots_ML.center_beam_search as cbs
@@ -54,6 +68,31 @@ def plot_field(field):
     plt.show()
 
 
+def plot_field_3D_multi_planes(field3D, number=6, rows=3):
+    """
+    Function plots |E| and phase of the field in 1 plot.
+    Just a small convenient wrapper
+    """
+    fig, axis = plt.subplots(math.ceil(number / rows), 3, figsize=(10, 3 * math.ceil(number / rows)))
+    reso_z = np.shape(field3D)[2]
+    for i, ax_r in enumerate(axis):
+        for j, ax in enumerate(ax_r):
+            image = ax.imshow(np.abs(field3D[:, :, int((reso_z - 1) / (number-1) * (len(ax_r) + j))]))
+            ax.set_title(f'|E|, index z={int((reso_z - 1) / (number-1) * (i * len(ax_r) + j))}')
+            plt.colorbar(image, ax=ax, shrink=0.4, pad=0.02, fraction=0.1)
+    plt.tight_layout()
+    plt.show()
+    fig, axis = plt.subplots(math.ceil(number / rows), 3, figsize=(10, 3 * math.ceil(number / rows)))
+    for i, ax_r in enumerate(axis):
+        for j, ax in enumerate(ax_r):
+            image = ax.imshow(np.angle(field3D[:, :, int((reso_z - 1) / (number - 1) * (len(ax_r) + j))]), cmap='jet')
+            ax.set_title(f'phase(E), index z={int((reso_z - 1) / (number - 1) * (i * len(ax_r) + j))}')
+            plt.colorbar(image, ax=ax, shrink=0.4, pad=0.02, fraction=0.1)
+
+    plt.tight_layout()
+    plt.show()
+
+
 def find_beam_waist(field, mesh=None):
     """
     wrapper for the beam waste finder. More details in knots_ML.center_beam_search
@@ -85,24 +124,67 @@ def field_interpolation(field, mesh=None, resolution=(100, 100),
     return interpol_field(*xyMesh_interpol), xyMesh_interpol
 
 
-def one_plane_propagator(fieldPlane, dz, stepsNumber_p, stepsNumber_m=None, n0=1, k0=1):  # , shapeWrong=False
+def one_plane_propagator(field, dz, stepsNumber_p, stepsNumber_m=None, n0=1, k0=1):
+    """
+    Double side propagation wrapper for fg.propagator_split_step_3D_linear
+    :param field: 2D complex field
+    :param dz: step along z
+    :param stepsNumber_p: number of steps (forward, p - plus) [there is a chance it's confused with m direction)
+    :param stepsNumber_m: number of steps (back, m - minus)
+    :param n0: refractive index
+    :param k0: wave number
+    :return: 3D field
+    """
     if stepsNumber_m is None:
         stepsNumber_m = stepsNumber_p
-    fieldPropMinus = fg.propagator_split_step_3D_linear(fieldPlane, dz=-dz, zSteps=stepsNumber_p, n0=n0, k0=k0)
+    fieldPropMinus = fg.propagator_split_step_3D_linear(field, dz=-dz, zSteps=stepsNumber_p, n0=n0, k0=k0)
 
-    fieldPropPLus = fg.propagator_split_step_3D_linear(fieldPlane, dz=dz, zSteps=stepsNumber_m, n0=n0, k0=k0)
-    fieldPropTotal = np.concatenate((np.flip(fieldPropMinus, axis=2), fieldPropPLus[:, :, 1:-1]), axis=2)
+    fieldPropPLus = fg.propagator_split_step_3D_linear(field, dz=dz, zSteps=stepsNumber_m, n0=n0, k0=k0)
+    fieldPropTotal = np.concatenate((np.flip(fieldPropMinus, axis=2), fieldPropPLus[:, :, 1:]), axis=2)
     return fieldPropTotal
 
 
 def main_field_processing(
         path,
         plotting=True,
-        resolution_iterpol=(70, 70),
-        resolution_crop=(50, 50),
+        resolution_iterpol_center=(70, 70),
+        xMinMax_frac_center=(1, 1),
+        yMinMax_frac_center=(1, 1),
+        resolution_interpol_working=(150, 150),
+        xMinMax_frac_working=(1, 1),
+        yMinMax_frac_working=(1, 1),
+        resolution_crop=(120, 120),
         moments_init=None,
         moments_center=None,
-        ):
+):
+    """
+    This function:
+     1) reading the field from matlab file
+     2) converting it into numpy array
+     3) normalizing
+     4) finding the beam waste
+     5) rescaling the field, using the interpolation, for faster next steps
+     6) finding the beam center
+     7) rescaling field to the scale we want for 3D calculations
+     8) removing the tilt and shift
+
+    Assumption
+    ----------
+    Beam waist finder only works with a uniform grid (dx = dy)
+
+    :param path: file name
+    :param plotting: if we want to see the plots and extra information
+    :param resolution_iterpol_center: resolution for the beam center finder
+    :param xMinMax_frac_center: rescale ration along X axis for the beam center
+    :param yMinMax_frac_center: rescale ration along Y axis for the beam center
+    :param resolution_interpol_working: resolution for the final field before the cropping
+    :param xMinMax_frac_working: rescale ration along X axis for the beam center
+    :param yMinMax_frac_working: rescale ration along X axis for the beam center
+    :param resolution_crop: actual final resolution of the field
+    :param moments_init: the moments for the LG spectrum
+    :param moments_center: the moments for the beam center finder
+    :return: 2D complex field
+    """
     # beam width search work only with x_res==y_res
 
     if moments_init is None:
@@ -130,8 +212,8 @@ def main_field_processing(
 
     # rescaling field
     field_interpol, mesh_interpol = field_interpolation(
-        field_norm, mesh=mesh_init, resolution=resolution_iterpol,
-        xMinMax_frac=(1., 1.), yMinMax_frac=(1., 1.)
+        field_norm, mesh=mesh_init, resolution=resolution_iterpol_center,
+        xMinMax_frac=xMinMax_frac_center, yMinMax_frac=yMinMax_frac_center
     )
     if plotting:
         plot_field(field_interpol)
@@ -140,7 +222,8 @@ def main_field_processing(
     width = width / np.shape(field_norm)[0] * np.shape(field_interpol)[0]
 
     # plotting spec to select moments. .T because Danilo's code saving it like that
-    _ = cbs.LG_spectrum(field_interpol.T, **moments_init, mesh=mesh_interpol, plot=plotting, width=width, k0=1)
+    if plotting:
+        _ = cbs.LG_spectrum(field_interpol.T, **moments_init, mesh=mesh_interpol, plot=plotting, width=width, k0=1)
 
     # finding the beam center
     moments_init.update(moments_center)
@@ -152,13 +235,25 @@ def main_field_processing(
         **moments, threshold=1, width=width, k0=1, print_info=plotting
     )
 
+    # rescaling field to the scale we want for 3D calculations
+    field_interpol2, mesh_interpol2 = field_interpolation(
+        field_norm, mesh=mesh_init, resolution=resolution_interpol_working,
+        xMinMax_frac=xMinMax_frac_working, yMinMax_frac=yMinMax_frac_working
+    )
+    if plotting:
+        plot_field(field_interpol2)
+
     # removing the tilt
-    field_untilted = cbs.removeTilt(field_interpol, mesh_interpol, eta=-eta, gamma=gamma, k=1)
+    field_untilted = cbs.removeTilt(field_interpol2, mesh_interpol2, eta=-eta, gamma=gamma, k=1)
     if plotting:
         plot_field(field_untilted)
 
-    # cropping the beam around the center
+    # scaling the beam center
     shape = np.shape(field_untilted)
+    x = int(x / np.shape(field_interpol)[0] * shape[0])
+    y = int(y / np.shape(field_interpol)[1] * shape[1])
+
+    # cropping the beam around the center
     field_cropped = field_untilted[
                     shape[0] // 2 - x - resolution_crop[0] // 2:shape[0] // 2 - x + resolution_crop[0] // 2,
                     shape[1] // 2 - y - resolution_crop[1] // 2:shape[1] // 2 - y + resolution_crop[1] // 2]
@@ -173,16 +268,30 @@ def main_field_processing(
 
 
 if __name__ == '__main__':
-    # test_hopf_turb_path = ('C:\\Users\\Cmex-\\Box\\Knots Exp\\'
-    #                        'Experimental Data\\7-13-2022\\Field SR = 0.85\\3foil_turb_1.mat')
+    # test_hopf_turb_path = '3foil_turb_1.mat'
     # field2D, _ = main_field_processing(
     #     path=test_hopf_turb_path,
     #     plotting=True,
-    #     resolution_iterpol=(70, 70),
-    #     resolution_crop=(50, 50),
+    #     resolution_iterpol_center=(60, 60),
+    #     xMinMax_frac_center=(1, 1),
+    #     yMinMax_frac_center=(1, 1),
+    #     resolution_interpol_working=(150, 150),
+    #     xMinMax_frac_working=(0.8, 0.8),
+    #     yMinMax_frac_working=(0.8, 0.8),
+    #     resolution_crop=(120, 120),
     #     moments_init={'p': (0, 6), 'l': (-4, 4)},
     #     moments_center={'p0': (0, 4), 'l0': (-4, 2)},
     # )
     # np.save('field2D_test.npy', field2D)
     field2D = np.load('field2D_test.npy')
     plot_field(field2D)
+
+    # 2-directional propagation
+    dz, steps_both = 5, 25
+    field3D = one_plane_propagator(field2D, dz=dz, stepsNumber_p=steps_both, stepsNumber_m=None, n0=1, k0=1)
+    # plot_field_3D_multi_planes(field3D, number=6, rows=3)
+    plot_field(field3D[:, :, 0])
+    plot_field(field3D[:, :, 25])
+    plot_field(field3D[:, :, -1])
+
+# x=0, y=0, eta=6.0*, gamma=2.0*, var=0.08804003185287904  70 70
