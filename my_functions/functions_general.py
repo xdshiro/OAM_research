@@ -121,9 +121,9 @@ def create_mesh_XY(xMinMax=None, yMinMax=None, xRes=50, yRes=50,
     :return: mesh
     """
     if xMinMax is None:
-        xMinMax = (0-xRes//2, 0+xRes//2)
+        xMinMax = (0 - xRes // 2, 0 + xRes // 2)
     if yMinMax is None:
-        yMinMax = (0-yRes//2, 0+yRes//2)
+        yMinMax = (0 - yRes // 2, 0 + yRes // 2)
     xArray = np.linspace(*xMinMax, xRes)
     yArray = np.linspace(*yMinMax, yRes)
     return np.meshgrid(xArray, yArray, indexing=indexing, **kwargs)
@@ -318,7 +318,6 @@ def propagator_split_step_3D(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, 
     return fieldReturn
 
 
-
 def propagator_split_step_3D_linear(E, dz=1, xArray=None, yArray=None, zSteps=1, n0=1, k0=1):
     if xArray is None:
         xArray = np.array(range(np.shape(E)[0]))
@@ -343,13 +342,12 @@ def propagator_split_step_3D_linear(E, dz=1, xArray=None, yArray=None, zSteps=1,
     fieldReturn = np.zeros((xResolution, yResolution, zResolution), dtype=complex)
     fieldReturn[:, :, 0] = np.fft.fftshift(np.fft.fftn(E))
     for k in range(1, zResolution):
-        fieldReturn[:, :, k] = (fieldReturn[:, :, k-1] *
-                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[0] ** 2) *
-                          np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[1] ** 2))
-        fieldReturn[:, :, k-1] = np.fft.ifftn(np.fft.ifftshift(fieldReturn[:, :, k-1]))
+        fieldReturn[:, :, k] = (fieldReturn[:, :, k - 1] *
+                                np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[0] ** 2) *
+                                np.exp(-1j * dz / (2 * k0 * n0) * KxyMesh[1] ** 2))
+        fieldReturn[:, :, k - 1] = np.fft.ifftn(np.fft.ifftshift(fieldReturn[:, :, k - 1]))
     fieldReturn[:, :, -1] = np.fft.ifftn(np.fft.ifftshift(fieldReturn[:, :, -1]))
     return fieldReturn
-
 
 
 def one_plane_propagator(fieldPlane, dz, stepsNumber, n0=1, k0=1):  # , shapeWrong=False

@@ -234,10 +234,10 @@ def LG_spectrum(beam, l=(-3, 3), p=(0, 5), xM=(-1, 1), yM=(-1, 1), width=1., k0=
     return spectrum
 
 
-
 def beamFullCenter(beam, mesh, stepEG=None, stepXY=None, displacement_function=shiftTiltCombined,
                    p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3),
-                   width=1, k0=1, x=None, y=None, eta2=0., gamma=0., threshold=0.99):
+                   width=1, k0=1, x=None, y=None, eta2=0., gamma=0., threshold=0.99,
+                   print_info=False):
     if stepEG is None:
         stepEG = 0.1, 0.1
     if stepXY is None:
@@ -270,9 +270,9 @@ def beamFullCenter(beam, mesh, stepEG=None, stepXY=None, displacement_function=s
                                                       eta2=eta2, gamma=gamma,
                                                       displacement_function=displacement_function,
                                                       p=p, l=l, p0=p0, l0=l0, width=width, k0=k0)
-
-            print(f'x={round(x, 3)}, y={round(y,3)},'
-                  f' eta={round(eta2 * 180 / np.pi, 3)}*, gamma={round(gamma* 180 / np.pi, 3)}*, var={var}')
+            if print_info:
+                print(f'x={round(x, 3)}, y={round(y, 3)},'
+                      f' eta={round(eta2 * 180 / np.pi, 3)}*, gamma={round(gamma * 180 / np.pi, 3)}*, var={var}')
             if var < (varIt * threshold):
                 varIt = var
                 correctWay = True
@@ -311,7 +311,6 @@ def beamFullCenter(beam, mesh, stepEG=None, stepXY=None, displacement_function=s
             return x, y, eta2, gamma
         else:
             var0 = varEG
-
 
 
 def find_width(beam, mesh, widthStep=0.1, l=(-5, 5), p=(0, 5), width=1., k0=1., print_steps=True):
@@ -396,7 +395,6 @@ def beam_center_coordinates(beam, mesh, stepXY=None, stepEG=None,
     return mesh, beam
 
 
-
 # functions below are old and may not be functional. There were used for the algorithm implementation
 # for separated shift and tilt, not combined.
 # Maybe useful if all the fields have only shift or only tilt
@@ -439,6 +437,7 @@ def variance_single_transition(field, mesh, r, eta, displacement_function=displa
     V = variance_V_helper(Pl, np.arange(l1, l2 + 1))
     return V
 
+
 def variance_map_shift(beam, mesh, displacement_function=displacement_lateral,
                        resolution_V=(4, 4), xBound=(-1, 1), yBound=(-1, 1), width=1., k0=1.,
                        p=(0, 5), l=(0, 4), p0=(0, 5), l0=(-3, 3)):
@@ -475,8 +474,6 @@ def variance_map_tilt(beam, mesh, displacement_function=displacement_deflection,
                                                  width=width, k0=k0,
                                                  p=p, l=l, p0=p0, l0=l0)
     return V
-
-
 
 
 def center_beam_finding(beam, mesh, stepXY=None, displacement_function=displacement_lateral,
@@ -604,7 +601,7 @@ if __name__ == '__main__':
 
     def beamF(*xyMesh, width=1, **kwargs):
         return bp.LG_combination(*xyMesh,
-                                 coefficients=[1/np.sqrt(2), 1/np.sqrt(2)],
+                                 coefficients=[1 / np.sqrt(2), 1 / np.sqrt(2)],
                                  # coefficients=[1, 0],
                                  modes=[(0, 0), (2, 1)],
                                  width=[width, width], x0=xDis, y0=yDis, **kwargs)
@@ -633,20 +630,19 @@ if __name__ == '__main__':
     #                         shift=True, tilt=False, fast=False)
     # new_xy_mesh = removeShift(xyMesh, 0.5, 0.5)
     # beam = removeTilt(beam, new_xy_mesh, eta=30*np.pi/180, gamma=-20*np.pi/180)
-    beam = removeTilt(beam, xyMesh, eta=140/180*np.pi, gamma=10/180*np.pi)
+    beam = removeTilt(beam, xyMesh, eta=140 / 180 * np.pi, gamma=10 / 180 * np.pi)
     ax = pl.plot_2D(np.abs(beam), x=[-4, 4], y=[-4, 4], show=False)
     pl.plot_scatter_2D(x=0.4, y=-0.3, xlim=[-4, 4], ylim=[-4, 4], ax=ax, color='g', size=150, show=True)
     pl.plot_2D(np.angle(beam), x=[-4, 4], y=[-4, 4])
     exit()
     spec = LG_spectrum(beam, l=(-4, 5), p=(0, 4), mesh=xyMesh, plot=True, width=1, k0=1)
 
-    beamFullCenter(beam, xyMesh, stepXY=(0.1, 0.1), stepEG=(5/180*np.pi, 1/180*np.pi),
+    beamFullCenter(beam, xyMesh, stepXY=(0.1, 0.1), stepEG=(5 / 180 * np.pi, 1 / 180 * np.pi),
                    **pl_dict, threshold=1,
                    width=1, k0=1, x=0, y=0, eta2=0., gamma=0.)
     exit()
 
-
-    beam_center_coordinates(beam, xyMesh, stepXY=(0.1, 0.1), stepEG=(2.5/180*np.pi, 2.5/180*np.pi),
+    beam_center_coordinates(beam, xyMesh, stepXY=(0.1, 0.1), stepEG=(2.5 / 180 * np.pi, 2.5 / 180 * np.pi),
                             **pl_dict,
                             width=1, k0=1, x=0, y=0, eta=0., gamma=0.,
                             shift=True, tilt=True, fast=False)
