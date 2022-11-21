@@ -27,7 +27,22 @@ def loadDots():
     return dots, dots_dict
 
 
-def plotDots(dots, dots_bound, show=True, color='black', size=15, width=185, fig=None):
+def plotDots(dots, dots_bound=None, show=True, color='black', size=15, width=185, fig=None):
+    """
+    Function plots the array of dots in a beautiful and interactive way in your browser.
+    :param dots: array of dots
+    :param dots_bound: which dots to use to get the box frames. By default it uses the dots itself,
+        but if you want to make the frames the same with other plots, you can use other dots here, same
+        for all plots.
+    :param show: plotting in the browser. Can be turned off to add extra plots on top
+    :param color: color of the dots
+    :param size: size of the dots
+    :param width: width of the shell of the dots (for a better visualization)
+    :param fig: figure for the combination with other plots
+    :return: fig
+    """
+    if dots_bound is None:
+        dots_bound = dots
     if fig is None:
         fig = pl.plot_3D_dots_go(dots, marker={'size': size, 'color': color,
                                                'line': dict(width=width, color='white')})

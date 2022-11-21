@@ -217,6 +217,15 @@ def get_singularities(E, value=1, nonValue=0, bigSingularity=False, axesAll=Fals
                       singularities_finder=plane_singularities_finder_4dots, returnDict=False):
     """
     cut_non_oam simplifier. Just return the array of singularities
+    :param E: complex field
+    :param value: all singularities will have these values +- values (depend on the sing sign)
+    :param nonValue: all non-singularities have this value
+    :param bigSingularity: singularities and all dots around it has "value"
+    :param axesAll: singularities are searched not only in Oxy, but in Oxz and Oyz
+    :param circle: if the singularity is found, the circle around it is automatically equaled to nonValue
+    :param singularities_finder: plane_singularities_finder_9dots or _4dots. 2nd one is faster
+    :param returnDict: if we also to get not only numpy array but also dict with dots {(x,y,z):+-1}
+    :return: [the whole 3d massive with values and nonValues, dict[x, y, z]=value]
     """
     if isinstance(E, dict):
         dotsOnly = E

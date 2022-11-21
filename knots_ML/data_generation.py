@@ -14,16 +14,15 @@ First main function is main_field_processing:
 
 Second main function is !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
-import my_functions.functions_general as fg
-# import importlib
-# importlib.reload(fg)
-import my_functions.singularities as sing
-import my_functions.beams_and_pulses as bp
 import math
 import numpy as np
 import scipy.io as sio
-import knots_ML.center_beam_search as cbs
 import matplotlib.pyplot as plt
+import my_functions.singularities as sing
+import my_functions.functions_general as fg
+import knots_ML.dots_processing as dp
+import knots_ML.center_beam_search as cbs
+import my_functions.beams_and_pulses as bp
 
 
 def read_field_2D_single(path, field=None):
@@ -68,25 +67,30 @@ def plot_field(field):
     plt.show()
 
 
-def plot_field_3D_multi_planes(field3D, number=6, rows=3):
+def plot_field_3D_multi_planes(field3D, number=6, columns=3):
     """
-    Function plots |E| and phase of the field in 1 plot.
+    Function plots |E| and phase of the field in 1 plot at different z.
     Just a small convenient wrapper
+
+    :param field3D: 3D complex field, any resolution
+    :param number: how many slices do we want to see
+    :param columns: number of columns to split the plots into
     """
-    fig, axis = plt.subplots(math.ceil(number / rows), 3, figsize=(10, 3 * math.ceil(number / rows)))
+    fig, axis = plt.subplots(math.ceil(number / columns), 3, figsize=(10, 3 * math.ceil(number / columns)))
     reso_z = np.shape(field3D)[2]
     for i, ax_r in enumerate(axis):
         for j, ax in enumerate(ax_r):
-            image = ax.imshow(np.abs(field3D[:, :, int((reso_z - 1) / (number-1) * (len(ax_r) + j))]))
-            ax.set_title(f'|E|, index z={int((reso_z - 1) / (number-1) * (i * len(ax_r) + j))}')
+            image = ax.imshow(np.abs(field3D[:, :, int((reso_z - 1) / (number - 1) * (len(ax_r) * i + j))]))
+            ax.set_title(f'|E|, index z={int((reso_z - 1) / (number - 1) * (len(ax_r) * i + j))}')
             plt.colorbar(image, ax=ax, shrink=0.4, pad=0.02, fraction=0.1)
     plt.tight_layout()
     plt.show()
-    fig, axis = plt.subplots(math.ceil(number / rows), 3, figsize=(10, 3 * math.ceil(number / rows)))
+    fig, axis = plt.subplots(math.ceil(number / columns), 3, figsize=(10, 3 * math.ceil(number / columns)))
     for i, ax_r in enumerate(axis):
         for j, ax in enumerate(ax_r):
-            image = ax.imshow(np.angle(field3D[:, :, int((reso_z - 1) / (number - 1) * (len(ax_r) + j))]), cmap='jet')
-            ax.set_title(f'phase(E), index z={int((reso_z - 1) / (number - 1) * (i * len(ax_r) + j))}')
+            image = ax.imshow(np.angle(field3D[:, :, int((reso_z - 1) / (number - 1) * (len(ax_r) * i + j))]),
+                              cmap='jet')
+            ax.set_title(f'phase(E), index z={int((reso_z - 1) / (number - 1) * (len(ax_r) * i + j))}')
             plt.colorbar(image, ax=ax, shrink=0.4, pad=0.02, fraction=0.1)
 
     plt.tight_layout()
@@ -138,7 +142,6 @@ def one_plane_propagator(field, dz, stepsNumber_p, stepsNumber_m=None, n0=1, k0=
     if stepsNumber_m is None:
         stepsNumber_m = stepsNumber_p
     fieldPropMinus = fg.propagator_split_step_3D_linear(field, dz=-dz, zSteps=stepsNumber_p, n0=n0, k0=k0)
-
     fieldPropPLus = fg.propagator_split_step_3D_linear(field, dz=dz, zSteps=stepsNumber_m, n0=n0, k0=k0)
     fieldPropTotal = np.concatenate((np.flip(fieldPropMinus, axis=2), fieldPropPLus[:, :, 1:]), axis=2)
     return fieldPropTotal
@@ -267,31 +270,76 @@ def main_field_processing(
     return field, mesh
 
 
-if __name__ == '__main__':
-    # test_hopf_turb_path = '3foil_turb_1.mat'
-    # field2D, _ = main_field_processing(
-    #     path=test_hopf_turb_path,
-    #     plotting=True,
-    #     resolution_iterpol_center=(60, 60),
-    #     xMinMax_frac_center=(1, 1),
-    #     yMinMax_frac_center=(1, 1),
-    #     resolution_interpol_working=(150, 150),
-    #     xMinMax_frac_working=(0.8, 0.8),
-    #     yMinMax_frac_working=(0.8, 0.8),
-    #     resolution_crop=(120, 120),
-    #     moments_init={'p': (0, 6), 'l': (-4, 4)},
-    #     moments_center={'p0': (0, 4), 'l0': (-4, 2)},
-    # )
-    # np.save('field2D_test.npy', field2D)
-    field2D = np.load('field2D_test.npy')
-    plot_field(field2D)
+def main_dots_building(
+        path,
+        plotting=True,
+        dz=5,
+        steps_both=25,
+        resolution_crop=(100, 100),
+        r_crop=30
+):
+    field2D = np.load(path)
+    if plotting:
+        plot_field(field2D)
 
     # 2-directional propagation
-    dz, steps_both = 5, 25
+    # total resolution along z is (steps_both * x + 1)
     field3D = one_plane_propagator(field2D, dz=dz, stepsNumber_p=steps_both, stepsNumber_m=None, n0=1, k0=1)
-    # plot_field_3D_multi_planes(field3D, number=6, rows=3)
-    plot_field(field3D[:, :, 0])
-    plot_field(field3D[:, :, 25])
-    plot_field(field3D[:, :, -1])
+    plot_field_3D_multi_planes(field3D, number=6, columns=3)
+
+    # cropping the 3D field, rectangular prism shape
+    # it's used for the faster dots calculation
+    shape = np.shape(field3D)
+    if shape[0] > resolution_crop[0] and shape[1] > resolution_crop[1]:
+        field3D_cropped = field3D[
+                          shape[0] // 2 - resolution_crop[0] // 2:shape[0] // 2 + resolution_crop[0] // 2,
+                          shape[1] // 2 - resolution_crop[1] // 2:shape[1] // 2 + resolution_crop[1] // 2,
+                          :]
+    else:
+        field3D_cropped = field3D
+        print('Resolution is lower than the crop resolution')
+
+    # getting singularity dots using all 3 cross-sections
+    dots_init = sing.get_singularities(np.angle(field3D_cropped), axesAll=True)
+    # dp.plotDots(dots_init, dots_init, color='black', show=plotting, size=10)
+
+    # cropping dots, in a radius < R
+    x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
+    dots_cropped = np.array([dot for dot in dots_init if
+                             np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop])
+    if plotting:
+        dp.plotDots(dots_cropped, dots_cropped, color='black', show=plotting, size=10)
+
+
+if __name__ == '__main__':
+    file_processing_ = False
+    if file_processing_:
+        test_hopf_turb_path = '3foil_turb_1.mat'
+        field2D, _ = main_field_processing(
+            path=test_hopf_turb_path,
+            plotting=True,
+            resolution_iterpol_center=(60, 60),
+            xMinMax_frac_center=(1, 1),
+            yMinMax_frac_center=(1, 1),
+            resolution_interpol_working=(200, 200),
+            xMinMax_frac_working=(1.3, 1.3),
+            yMinMax_frac_working=(1.3, 1.3),
+            resolution_crop=(180, 180),
+            moments_init={'p': (0, 6), 'l': (-4, 4)},
+            moments_center={'p0': (0, 4), 'l0': (-4, 2)},
+        )
+        np.save('field2D_test.npy', field2D)
+        exit()
+
+    dots_building_ = True
+    if dots_building_:
+        main_dots_building(
+            path='field2D_test.npy',
+            plotting=True,
+            dz=5,
+            steps_both=25,
+            resolution_crop=(80, 80)
+        )
+        exit()
 
 # x=0, y=0, eta=6.0*, gamma=2.0*, var=0.08804003185287904  70 70
