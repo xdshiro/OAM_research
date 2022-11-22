@@ -30,6 +30,7 @@ def loadDots():
 def plotDots(dots, dots_bound=None, show=True, color='black', size=15, width=185, fig=None):
     """
     Function plots the array of dots in a beautiful and interactive way in your browser.
+    Plots both numpy array and dict
     :param dots: array of dots
     :param dots_bound: which dots to use to get the box frames. By default it uses the dots itself,
         but if you want to make the frames the same with other plots, you can use other dots here, same
@@ -41,6 +42,10 @@ def plotDots(dots, dots_bound=None, show=True, color='black', size=15, width=185
     :param fig: figure for the combination with other plots
     :return: fig
     """
+    if isinstance(dots, dict):
+        dots = np.array([dot for dot in dots])
+    if isinstance(dots_bound, dict):
+        dots_bound = np.array([dot for dot in dots_bound])
     if dots_bound is None:
         dots_bound = dots
     if fig is None:
@@ -173,7 +178,10 @@ def filter_ThreeNeighbours(dots_dict):
                 # new_dots.remove(dot)
     new_dots = []
     for dot in dots_to_remove:
-        dots_dict.pop(dot)
+        try:
+            dots_dict.pop(dot)
+        except KeyError:
+            print('filter_ThreeNeighbours has a small problem with deleting items')
     for dot in set.union(new_dots_pairs, new_dots_pairs_temp):
         new_dots.append(dot)
     # return np.array(list(new_dots_pairs))
@@ -431,6 +439,11 @@ def globalFilterDots(dots_dict):
 
 
 def filtered_dots(dots_dict):
+    """
+    It's a wrapper for globalFilterDots()
+    This function places all the filtered dots into 1 array. It checks, if the arrays are empty as well.
+    :param dots_dict: dictionary with all the dots
+    """
     dots_final, dots_left = globalFilterDots(dots_dict)
     dots_final_combined = []
     for dots_arrays in dots_final:

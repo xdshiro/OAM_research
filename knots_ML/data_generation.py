@@ -285,7 +285,8 @@ def main_dots_building(
     # 2-directional propagation
     # total resolution along z is (steps_both * x + 1)
     field3D = one_plane_propagator(field2D, dz=dz, stepsNumber_p=steps_both, stepsNumber_m=None, n0=1, k0=1)
-    plot_field_3D_multi_planes(field3D, number=6, columns=3)
+    if plotting:
+        plot_field_3D_multi_planes(field3D, number=6, columns=3)
 
     # cropping the 3D field, rectangular prism shape
     # it's used for the faster dots calculation
@@ -300,18 +301,24 @@ def main_dots_building(
         print('Resolution is lower than the crop resolution')
 
     # getting singularity dots using all 3 cross-sections
-    dots_init = sing.get_singularities(np.angle(field3D_cropped), axesAll=True)
+    dots_init_dict, dots_init = sing.get_singularities(np.angle(field3D_cropped), axesAll=True, returnDict=True)
     # dp.plotDots(dots_init, dots_init, color='black', show=plotting, size=10)
 
-    # cropping dots, in a radius < R
+    # cropping dots, in a radius <= R
     x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
-    dots_cropped = np.array([dot for dot in dots_init if
-                             np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop])
+    dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
+                         np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop}
     if plotting:
-        dp.plotDots(dots_cropped, dots_cropped, color='black', show=plotting, size=10)
+        dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
+
+    # applying the dot simplification algorithm from dots_processing.py
+    dots_filtered = dp.filtered_dots(dots_cropped_dict)
+    if plotting:
+        dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
 
 
 if __name__ == '__main__':
+
     file_processing_ = False
     if file_processing_:
         test_hopf_turb_path = '3foil_turb_1.mat'
@@ -335,7 +342,7 @@ if __name__ == '__main__':
     if dots_building_:
         main_dots_building(
             path='field2D_test.npy',
-            plotting=True,
+            plotting=False,
             dz=5,
             steps_both=25,
             resolution_crop=(80, 80)
