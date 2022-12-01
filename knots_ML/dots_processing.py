@@ -80,6 +80,31 @@ def neighboursDots(x_c, y_c, z_c, dots_dict):
     return count, dots
 
 
+def filter_ZeroNeighbours(dots_dict):
+    """
+    Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
+    too sharp. All the good dots are removed from dots_dict (using the shallow copy)
+    :param dots_dict: dictionary with all the dots
+    :return: an array of new dots (removed and not) [(1,2,3), (3,4,5)...]
+    """
+    new_dots = []
+    dots_problem = []
+    for dot in dots_dict:
+        count, dots = neighboursDots(*dot, dots_dict)
+        if count == 1:
+            # print(f'problem dot {dot}, (removed) (filterZeroNeighbours)')
+            dots_problem.append(dot)
+    # removing dots which are definitely separated from other algorithms
+    # and are definitely good and viable
+    for dot in dots_problem:
+        dots_dict.pop(dot)
+    # for dot in new_dots:
+    #     count, dots = neighboursDots(*dot, new_dots)
+    #     if count == 3:
+    #         dots_dict.pop(dot)
+    return np.array(new_dots), np.array(dots_problem)
+
+
 def filter_OneNeighbours(dots_dict):
     """
     Algorithm finds all dots with only 2 neighbors and checks if the trajectory is not
@@ -92,7 +117,7 @@ def filter_OneNeighbours(dots_dict):
     for dot in dots_dict:
         count, dots = neighboursDots(*dot, dots_dict)
         if count == 2:
-            print(f'problem dot {dot}, (removed) (filterOneNeighbours)')
+            # print(f'problem dot {dot}, (removed) (filterOneNeighbours)')
             dots_problem.append(dot)
     # removing dots which are definitely separated from other algorithms
     # and are definitely good and viable
@@ -120,7 +145,7 @@ def filter_TwoNeighbours(dots_dict):
         if count == 3:
             check = np.sum(dots, axis=0) / 3 - dot
             if np.sum(np.abs(check)) > 1:
-                print(f'problem dot {dot}, trajectory {check} (removed) (filterTwoNeighbours)')
+                # print(f'problem dot {dot}, trajectory {check} (removed) (filterTwoNeighbours)')
                 dots_problem.append(dot)
             else:
                 dots_to_remove.append(dot)
@@ -170,7 +195,7 @@ def filter_ThreeNeighbours(dots_dict):
                 # dots_dict.pop(dot)
                 # new_dots.remove(dot)
             elif count_dot2 == 3:
-                print(dot, dots3)
+                # print(dot, dots3)
                 new_dots_pairs_temp.add(tuple(np.sum(dots3, axis=0) / 3))
                 for dot_ in dots3:
                     dots_to_remove.append(dot_)
@@ -181,7 +206,8 @@ def filter_ThreeNeighbours(dots_dict):
         try:
             dots_dict.pop(dot)
         except KeyError:
-            print('filter_ThreeNeighbours has a small problem with deleting items')
+            pass
+            # print('filter_ThreeNeighbours has a small problem with deleting items')
     for dot in set.union(new_dots_pairs, new_dots_pairs_temp):
         new_dots.append(dot)
     # return np.array(list(new_dots_pairs))
@@ -425,16 +451,18 @@ def globalFilterDots(dots_dict):
     dots_dict_copy = copy.deepcopy(dots_dict)
     dots_final = []
     print('raw: ', len(dots_dict_copy))
+    dots_final.append(filter_ZeroNeighbours(dots_dict_copy)[0])
+    print('0. zero neighbour: ', len(dots_dict_copy))
     dots_final.append(filter_OneNeighbours(dots_dict_copy)[0])
-    print('0. one neighbour: ', len(dots_dict_copy))
+    print('1. one neighbour: ', len(dots_dict_copy))
     dots_final.append(filter_TwoNeighbours(dots_dict_copy)[0])
-    print('1. two neighbours: ', len(dots_dict_copy))
+    print('2. two neighbours: ', len(dots_dict_copy))
     dots_final.append(filter_ThreeNeighbours(dots_dict_copy)[0])
-    print('2. three neighbours: ', len(dots_dict_copy))
+    print('3. three neighbours: ', len(dots_dict_copy))
     dots_final.append(filter_PlaneThreeClusters(dots_dict_copy)[0])
-    print('3. plane 3 dots: ', len(dots_dict_copy))
+    print('4. plane 3 dots: ', len(dots_dict_copy))
     dots_final.append(filter_PlaneTwoClusters(dots_dict_copy)[0])
-    print('4. plane 2 dots: ', len(dots_dict_copy))
+    print('5. plane 2 dots (FINAL LENGTH): ', len(dots_dict_copy))
     return dots_final, dots_dict_copy
 
 

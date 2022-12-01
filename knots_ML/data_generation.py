@@ -14,8 +14,10 @@ First main function is main_field_processing:
 
 Second main function is !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
+
 import math
 import numpy as np
+import pandas as pd
 import scipy.io as sio
 import matplotlib.pyplot as plt
 import my_functions.singularities as sing
@@ -271,14 +273,13 @@ def main_field_processing(
 
 
 def main_dots_building(
-        path,
+        field2D,
         plotting=True,
         dz=5,
         steps_both=25,
         resolution_crop=(100, 100),
         r_crop=30
 ):
-    field2D = np.load(path)
     if plotting:
         plot_field(field2D)
 
@@ -304,6 +305,13 @@ def main_dots_building(
     dots_init_dict, dots_init = sing.get_singularities(np.angle(field3D_cropped), axesAll=True, returnDict=True)
     # dp.plotDots(dots_init, dots_init, color='black', show=plotting, size=10)
 
+    # cropping dots, in a square <= R
+    # x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
+    # dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
+    #                      (np.abs(dot[0] - x0) <= r_crop and np.abs(dot[1] - y0) <= r_crop)}
+    # if plotting:
+    #     dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
+
     # cropping dots, in a radius <= R
     x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
     dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
@@ -311,20 +319,128 @@ def main_dots_building(
     if plotting:
         dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
 
+    # moving dots to the corner to make 3D array smaller
+    dots_moved_dict = {
+        (dot[0] - (x0 - r_crop), dot[1] - (y0 - r_crop), dot[2]): 1 for dot in dots_init_dict}
+    # SOMETHING IS WRONG
     # applying the dot simplification algorithm from dots_processing.py
-    dots_filtered = dp.filtered_dots(dots_cropped_dict)
+    dots_filtered = dp.filtered_dots(dots_moved_dict)
     if plotting:
         dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
 
+    # saving dots into a data_frame. Both processed as well as unprocessed
+    # also saving the frames of the 3D knot for both of the
+    dots_raw = np.array([dot for dot in dots_init_dict])
+
+    z_max = np.shape(field3D_cropped)[-1]
+    test_dots = np.zeros((r_crop * 2 + 1, r_crop * 2 + 1, z_max))
+    for dot in dots_filtered:
+        dot = list(map(round, dot))
+        dot[0] -= x0
+        dot[1] -= y0
+        i, j, k = dot
+        test_dots[i, j, k] = 1
+    test_dots_dict = []
+    for i in range(2 * r_crop + 1):
+        for j in range(2 * r_crop + 1):
+            for k in range(np.shape(field3D_cropped)[-1]):
+                if test_dots[i, j, k] != 0:
+                    test_dots_dict.append([i, j, k])
+    print(test_dots_dict)
+    print(list(dots_filtered))
+    exit()
+    # test_dots = dots_with_zeros(
+    #     dots_raw, radius=r_crop, z_dim=[0, np.shape(field3D_cropped)[-1]],
+    #     resolution_crop=resolution_crop)
+    # print(len(test_array))
+    # test_array = dots_array_with_zeros(
+    #     dots_filtered, radius=r_crop, z_dim=[0, np.shape(field3D_cropped)[-1]],
+    #     resolution_crop=resolution_crop)
+    # print(len(test_array))
+    # test_dots = test_array.reshape((2 * r_crop + 1, 2 * r_crop + 1, np.shape(field3D_cropped)[-1]))
+    # print(test_dots)
+    # test_dots_dict = []
+    # for i in range(2 * r_crop + 1):
+    #     for j in range(2 * r_crop + 1):
+    #         for k in range(np.shape(field3D_cropped)[-1]):
+    #             if test_dots[i, j, k] != 0:
+    #                 test_dots_dict.append([i, j, k])
+    # print(test_dots_dict)
+    # print(dots_raw)
+    # test_dots_dict = np.array(test_dots_dict)
+    dots_moved = np.array([dot for dot in dots_moved_dict])
+    dp.plotDots(dots_moved, dots_raw, color='grey', show=True, size=12)
+    dp.plotDots(dots_filtered, dots_raw, color='grey', show=True, size=12)
+    # dp.plotDots(test_dots_dict, dots_raw, color='grey', show=True, size=12)
+    # for i, value in test_array:
+    #     x =
+    exit()
+    # exit()
+    return {
+        'dots_raw': list(dots_raw),
+        'dots_filtered': list(dots_filtered),
+        'radius': r_crop,
+        'z_min': 0,
+        'x0': x0,
+        'y0': y0,
+        'z_max': np.shape(field3D_cropped)[-1],
+    }
+
+
+def dots_with_zeros(dots, radius, z_dim, resolution_crop, flag_crop=False):
+    """
+
+    :param dots:
+    :param radius:
+    :param z_dim:
+    :return:
+    """
+    x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
+    x_array = np.arange(2 * radius + 1)
+    y_array = np.arange(2 * radius + 1)
+    z_array = np.arange(z_dim[0], z_dim[1])
+    x_res, y_res, z_res = len(x_array), len(y_array), len(z_array)
+    # answer = np.zeros(x_res * y_res * z_res)
+    answer = np.zeros((x_res, y_res, z_res))
+    # dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
+    #                      np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop}
+    for dot in dots:
+        dot = list(map(round, dot))
+        dot[0] -= x0
+        dot[1] -= y0
+        i, j, k = dot
+        answer[i, j, k] = 1
+    if not flag_crop:
+        return np.array(answer)
+    else:
+        # not fully correct, resolutions were changed
+        indices_remove = []
+        for i in x_array:
+            for j in y_array:
+                if np.sqrt((i - x0) ** 2 + (j - y0) ** 2) <= radius:
+                    index_remove = [
+                        k * resolution_crop[0] * resolution_crop[1] +
+                        j * resolution_crop[0]
+                        + i for k in z_array
+                    ]
+                    indices_remove.append(index_remove)
+        indices_remove = np.array([index for indices in indices_remove for index in indices])
+        answer_final = np.delete(answer, indices_remove)
+        return answer_final
+
 
 if __name__ == '__main__':
+
+    name_field2D = f'field2D_test'
+    directory_save_field = f'data/test/'
+    save_full_name = f'{directory_save_field}{name_field2D}.npy'
 
     file_processing_ = False
     if file_processing_:
         test_hopf_turb_path = '3foil_turb_1.mat'
         field2D, _ = main_field_processing(
             path=test_hopf_turb_path,
-            plotting=True,
+            plotting=False,
             resolution_iterpol_center=(60, 60),
             xMinMax_frac_center=(1, 1),
             yMinMax_frac_center=(1, 1),
@@ -335,18 +451,26 @@ if __name__ == '__main__':
             moments_init={'p': (0, 6), 'l': (-4, 4)},
             moments_center={'p0': (0, 4), 'l0': (-4, 2)},
         )
-        np.save('field2D_test.npy', field2D)
-        exit()
+        np.save(save_full_name, field2D)
 
     dots_building_ = True
     if dots_building_:
-        main_dots_building(
-            path='field2D_test.npy',
+        field2D = np.load(save_full_name)
+        knot_full_dict = main_dots_building(
+            field2D=field2D,
             plotting=False,
-            dz=5,
-            steps_both=25,
+            dz=12,
+            steps_both=20,
             resolution_crop=(80, 80)
         )
-        exit()
+        # df_dots_dotsFiltered = pd.DataFrame({
+        #     'dots_raw': dots_raw,
+        #     'dots_filtered': dots_filtered,
+        #     'radius': r_crop,
+        #     'z_min': 0,
+        #     'z_max': np.shape(field3D_cropped)[-1],
+        # })
+        # knot_full_df = pd.DataFrame.from_dict(knot_full_dict)
+        print(knot_full_dict)
 
 # x=0, y=0, eta=6.0*, gamma=2.0*, var=0.08804003185287904  70 70
