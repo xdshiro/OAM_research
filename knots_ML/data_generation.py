@@ -239,7 +239,8 @@ def main_field_processing(
         x=0, y=0, eta2=0., gamma=0.,
         **moments, threshold=1, width=width, k0=1, print_info=plotting
     )
-
+    # x = -3, y = -3, eta = 84.0 *, gamma = 2.0 *, var = 0.9814491923699317
+    # x, y, eta, gamma = -3, -3, 84.0 / 180 * np.pi, -2.0 / 180 * np.pi
     # rescaling field to the scale we want for 3D calculations
     field_interpol2, mesh_interpol2 = field_interpolation(
         field_norm, mesh=mesh_init, resolution=resolution_interpol_working,
@@ -249,10 +250,14 @@ def main_field_processing(
         plot_field(field_interpol2)
 
     # removing the tilt
+    # if eta >= np.pi / 2:
+    #     gamma = -gamma
+    # print(ga)
     field_untilted = cbs.removeTilt(field_interpol2, mesh_interpol2, eta=-eta, gamma=gamma, k=1)
     if plotting:
         plot_field(field_untilted)
 
+    exit()
     # scaling the beam center
     shape = np.shape(field_untilted)
     x = int(x / np.shape(field_interpol)[0] * shape[0])
@@ -316,21 +321,20 @@ def main_dots_building(
     x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
     dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
                          np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop}
-    if plotting:
-        dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
+    dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
 
     # moving dots to the corner to make 3D array smaller
     dots_moved_dict = {
-        (dot[0] - (x0 - r_crop), dot[1] - (y0 - r_crop), dot[2]): 1 for dot in dots_init_dict}
-    # SOMETHING IS WRONG
+        (dot[0] - (x0 - r_crop), dot[1] - (y0 - r_crop), dot[2]): 1 for dot in dots_cropped_dict}
+    dp.plotDots(dots_moved_dict, dots_cropped_dict, color='grey', show=plotting, size=12)
+
     # applying the dot simplification algorithm from dots_processing.py
     dots_filtered = dp.filtered_dots(dots_moved_dict)
-    if plotting:
-        dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
+    dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
 
     # saving dots into a data_frame. Both processed as well as unprocessed
     # also saving the frames of the 3D knot for both of the
-    dots_raw = np.array([dot for dot in dots_init_dict])
+    dots_raw = np.array([dot for dot in dots_filtered])
 
     z_max = np.shape(field3D_cropped)[-1]
     test_dots = np.zeros((r_crop * 2 + 1, r_crop * 2 + 1, z_max))
@@ -346,8 +350,10 @@ def main_dots_building(
             for k in range(np.shape(field3D_cropped)[-1]):
                 if test_dots[i, j, k] != 0:
                     test_dots_dict.append([i, j, k])
-    print(test_dots_dict)
-    print(list(dots_filtered))
+    print(test_dots)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(test_dots[:, 0], test_dots[:, 1], test_dots[:, 2])
     exit()
     # test_dots = dots_with_zeros(
     #     dots_raw, radius=r_crop, z_dim=[0, np.shape(field3D_cropped)[-1]],
@@ -431,37 +437,37 @@ def dots_with_zeros(dots, radius, z_dim, resolution_crop, flag_crop=False):
 
 if __name__ == '__main__':
 
-    name_field2D = f'field2D_test'
+    name_field2D = f'Efield_1_SR_9.500000e-01'
     directory_save_field = f'data/test/'
     save_full_name = f'{directory_save_field}{name_field2D}.npy'
 
-    file_processing_ = False
+    file_processing_ = True
     if file_processing_:
-        test_hopf_turb_path = '3foil_turb_1.mat'
+        test_hopf_turb_path = 'data/test/Efield_1_SR_9.500000e-01.mat'
         field2D, _ = main_field_processing(
             path=test_hopf_turb_path,
-            plotting=False,
-            resolution_iterpol_center=(60, 60),
+            plotting=True,
+            resolution_iterpol_center=(40, 40),
             xMinMax_frac_center=(1, 1),
             yMinMax_frac_center=(1, 1),
             resolution_interpol_working=(200, 200),
             xMinMax_frac_working=(1.3, 1.3),
             yMinMax_frac_working=(1.3, 1.3),
             resolution_crop=(180, 180),
-            moments_init={'p': (0, 6), 'l': (-4, 4)},
-            moments_center={'p0': (0, 4), 'l0': (-4, 2)},
+            moments_init={'p': (0, 3), 'l': (-3, 3)},
+            moments_center={'p0': (0, 9), 'l0': (-5, 5)},
         )
         np.save(save_full_name, field2D)
 
-    dots_building_ = True
+    dots_building_ = False
     if dots_building_:
         field2D = np.load(save_full_name)
         knot_full_dict = main_dots_building(
             field2D=field2D,
-            plotting=False,
+            plotting=True,
             dz=12,
             steps_both=20,
-            resolution_crop=(80, 80)
+            resolution_crop=(100, 100)
         )
         # df_dots_dotsFiltered = pd.DataFrame({
         #     'dots_raw': dots_raw,
