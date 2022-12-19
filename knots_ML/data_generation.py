@@ -447,7 +447,7 @@ if __name__ == '__main__':
         field2D, _ = main_field_processing(
             path=test_hopf_turb_path,
             plotting=True,
-            resolution_iterpol_center=(40, 40),
+            resolution_iterpol_center=(80, 80),
             xMinMax_frac_center=(1, 1),
             yMinMax_frac_center=(1, 1),
             resolution_interpol_working=(200, 200),

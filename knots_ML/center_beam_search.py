@@ -313,7 +313,7 @@ def beamFullCenter(beam, mesh, stepEG=None, stepXY=None, displacement_function=s
             var0 = varEG
 
 
-def find_width(beam, mesh, widthStep=0.1, l=(-5, 5), p=(0, 5), width=1., k0=1., print_steps=True):
+def find_width(beam, mesh, widthStep=0.1, l=(-8, 8), p=(0, 9), width=1., k0=1., print_steps=True):
     """
     this function finds the approximate beam waste (any position, any beam=sum(LG))
     :param mesh: mesh is required to have a scale of the beam => correct width scale
