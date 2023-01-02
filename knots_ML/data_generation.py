@@ -15,6 +15,7 @@ First main function is main_field_processing:
 Second main function is !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
 
+import os
 import math
 import numpy as np
 import pandas as pd
@@ -25,7 +26,8 @@ import my_functions.functions_general as fg
 import knots_ML.dots_processing as dp
 import knots_ML.center_beam_search as cbs
 import my_functions.beams_and_pulses as bp
-
+from os import listdir
+from os.path import isfile, join
 
 def read_field_2D_single(path, field=None):
     """
@@ -111,7 +113,7 @@ def find_beam_waist(field, mesh=None):
 
 
 def field_interpolation(field, mesh=None, resolution=(100, 100),
-                        xMinMax_frac=(1, 1), yMinMax_frac=(1, 1)):
+                        xMinMax_frac=(1, 1), yMinMax_frac=(1, 1), fill_value=True):
     """
     Wrapper for the field interpolation fg.interpolation_complex
     :param resolution: new field resolution
@@ -121,7 +123,7 @@ def field_interpolation(field, mesh=None, resolution=(100, 100),
     shape = np.shape(field)
     if mesh is None:
         mesh = fg.create_mesh_XY(xRes=shape[0], yRes=shape[1])
-    interpol_field = fg.interpolation_complex(field, mesh=mesh, fill_value=False)
+    interpol_field = fg.interpolation_complex(field, mesh=mesh, fill_value=fill_value)
     xMinMax = int(-shape[0] // 2 * xMinMax_frac[0]), int(shape[0] // 2 * xMinMax_frac[1])
     yMinMax = int(-shape[1] // 2 * yMinMax_frac[0]), int(shape[1] // 2 * yMinMax_frac[1])
     xyMesh_interpol = fg.create_mesh_XY(
@@ -191,7 +193,6 @@ def main_field_processing(
     :return: 2D complex field
     """
     # beam width search work only with x_res==y_res
-
     if moments_init is None:
         moments_init = {'p': (0, 6), 'l': (-4, 4)}
     if moments_center is None:
@@ -231,33 +232,29 @@ def main_field_processing(
         _ = cbs.LG_spectrum(field_interpol.T, **moments_init, mesh=mesh_interpol, plot=plotting, width=width, k0=1)
 
     # finding the beam center
-    moments_init.update(moments_center)
-    moments = moments_init
-    x, y, eta, gamma = cbs.beamFullCenter(
-        field_interpol, mesh_interpol,
-        stepXY=(1, 1), stepEG=(3 / 180 * np.pi, 1 / 180 * np.pi),
-        x=0, y=0, eta2=0., gamma=0.,
-        **moments, threshold=1, width=width, k0=1, print_info=plotting
-    )
-    # x = -3, y = -3, eta = 84.0 *, gamma = 2.0 *, var = 0.9814491923699317
-    # x, y, eta, gamma = -3, -3, 84.0 / 180 * np.pi, -2.0 / 180 * np.pi
+    ## moments_init.update(moments_center)
+    ## moments = moments_init
+    # x, y, eta, gamma = cbs.beamFullCenter(
+    #     field_interpol, mesh_interpol,
+    #     stepXY=(1, 1), stepEG=(3 / 180 * np.pi, 0.25 / 180 * np.pi),
+    #     x=0, y=0, eta2=0., gamma=0.,
+    #     **moments_center, threshold=1, width=width, k0=1, print_info=plotting
+    # )
+    x, y, eta, gamma = 0, 0, 0, 0
+
     # rescaling field to the scale we want for 3D calculations
     field_interpol2, mesh_interpol2 = field_interpolation(
         field_norm, mesh=mesh_init, resolution=resolution_interpol_working,
-        xMinMax_frac=xMinMax_frac_working, yMinMax_frac=yMinMax_frac_working
+        xMinMax_frac=xMinMax_frac_working, yMinMax_frac=yMinMax_frac_working, fill_value=False
     )
     if plotting:
         plot_field(field_interpol2)
 
     # removing the tilt
-    # if eta >= np.pi / 2:
-    #     gamma = -gamma
-    # print(ga)
     field_untilted = cbs.removeTilt(field_interpol2, mesh_interpol2, eta=-eta, gamma=gamma, k=1)
     if plotting:
         plot_field(field_untilted)
 
-    exit()
     # scaling the beam center
     shape = np.shape(field_untilted)
     x = int(x / np.shape(field_interpol)[0] * shape[0])
@@ -270,7 +267,7 @@ def main_field_processing(
     if plotting:
         plot_field(field_cropped)
 
-    # selecting the working field and field
+    # selecting the working field and mesh
     mesh = fg.create_mesh_XY(xRes=np.shape(field_cropped)[0], yRes=np.shape(field_cropped)[1])
     field = field_cropped
     print(f'field finished: {path[-20:]}')
@@ -297,7 +294,7 @@ def main_dots_building(
     # cropping the 3D field, rectangular prism shape
     # it's used for the faster dots calculation
     shape = np.shape(field3D)
-    if shape[0] > resolution_crop[0] and shape[1] > resolution_crop[1]:
+    if shape[0] >= resolution_crop[0] and shape[1] >= resolution_crop[1]:
         field3D_cropped = field3D[
                           shape[0] // 2 - resolution_crop[0] // 2:shape[0] // 2 + resolution_crop[0] // 2,
                           shape[1] // 2 - resolution_crop[1] // 2:shape[1] // 2 + resolution_crop[1] // 2,
@@ -308,7 +305,7 @@ def main_dots_building(
 
     # getting singularity dots using all 3 cross-sections
     dots_init_dict, dots_init = sing.get_singularities(np.angle(field3D_cropped), axesAll=True, returnDict=True)
-    # dp.plotDots(dots_init, dots_init, color='black', show=plotting, size=10)
+    dp.plotDots(dots_init, dots_init, color='black', show=plotting, size=10)
 
     # cropping dots, in a square <= R
     # x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
@@ -330,11 +327,22 @@ def main_dots_building(
 
     # applying the dot simplification algorithm from dots_processing.py
     dots_filtered = dp.filtered_dots(dots_moved_dict)
+    dots_raw = np.array([dot for dot in dots_filtered])
     dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
-
     # saving dots into a data_frame. Both processed as well as unprocessed
     # also saving the frames of the 3D knot for both of the
-    dots_raw = np.array([dot for dot in dots_filtered])
+    return dots_raw
+    ##########################################################
+    print(dots_raw)
+    z0 = 0
+    dots_raw_centered = dots_raw - [x0, y0, z0]
+    print(dots_raw_centered)
+    dots_raw_rounded = dots_raw_centered.astype(int)
+    print(dots_raw_rounded)
+    dp.plotDots(dots_moved_dict, dots_moved_dict, color='black', show=True, size=12)
+    dp.plotDots(dots_raw , dots_moved_dict, color='black', show=True, size=12)
+    dp.plotDots(dots_raw_rounded, dots_raw_rounded, color='black', show=True, size=12)
+    exit()
 
     z_max = np.shape(field3D_cropped)[-1]
     test_dots = np.zeros((r_crop * 2 + 1, r_crop * 2 + 1, z_max))
@@ -435,48 +443,64 @@ def dots_with_zeros(dots, radius, z_dim, resolution_crop, flag_crop=False):
         return answer_final
 
 
+def files_list(mypath, end='.mat'):
+    onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f)) and f.endswith(end)]
+    return onlyfiles
+
 if __name__ == '__main__':
+    directory_field = f'data/test/'
+    directory_field_saved = f'data/test/saved/'
+    if not os.path.isdir(directory_field_saved):
+        os.makedirs(directory_field_saved)
 
-    name_field2D = f'Efield_1_SR_9.500000e-01'
-    directory_save_field = f'data/test/'
-    save_full_name = f'{directory_save_field}{name_field2D}.npy'
-
-    file_processing_ = True
+    file_processing_ = False
     if file_processing_:
-        test_hopf_turb_path = 'data/test/Efield_1_SR_9.500000e-01.mat'
-        field2D, _ = main_field_processing(
-            path=test_hopf_turb_path,
-            plotting=True,
-            resolution_iterpol_center=(80, 80),
-            xMinMax_frac_center=(1, 1),
-            yMinMax_frac_center=(1, 1),
-            resolution_interpol_working=(200, 200),
-            xMinMax_frac_working=(1.3, 1.3),
-            yMinMax_frac_working=(1.3, 1.3),
-            resolution_crop=(180, 180),
-            moments_init={'p': (0, 3), 'l': (-3, 3)},
-            moments_center={'p0': (0, 9), 'l0': (-5, 5)},
-        )
-        np.save(save_full_name, field2D)
 
-    dots_building_ = False
+        files = files_list(directory_field)
+        print(files)
+        for file in files:
+            print(file)
+            field2D, _ = main_field_processing(
+                path=directory_field + file,
+                plotting=True,
+                resolution_iterpol_center=(100, 100),
+                xMinMax_frac_center=(1, 1),
+                yMinMax_frac_center=(1, 1),
+                resolution_interpol_working=(200, 200),
+                xMinMax_frac_working=(1.2, 1.2),
+                yMinMax_frac_working=(1.2, 1.2),
+                resolution_crop=(180, 180),
+                moments_init={'p': (0, 5), 'l': (-4, 4)},
+                moments_center={'p0': (0, 5), 'l0': (-4, 4)},
+            )
+            file_save = directory_field_saved + file[:-4] + '.npy'
+            print(file_save)
+            np.save(file_save, field2D)
+
+    dots_building_ = True
     if dots_building_:
-        field2D = np.load(save_full_name)
-        knot_full_dict = main_dots_building(
-            field2D=field2D,
-            plotting=True,
-            dz=12,
-            steps_both=20,
-            resolution_crop=(100, 100)
-        )
-        # df_dots_dotsFiltered = pd.DataFrame({
-        #     'dots_raw': dots_raw,
-        #     'dots_filtered': dots_filtered,
-        #     'radius': r_crop,
-        #     'z_min': 0,
-        #     'z_max': np.shape(field3D_cropped)[-1],
-        # })
-        # knot_full_df = pd.DataFrame.from_dict(knot_full_dict)
-        print(knot_full_dict)
+        files = files_list(directory_field_saved, end='.npy')
+        print(files)
+        for file in files:
+            print(file)
+            directory_field_saved_dots = f'data/test/saved/dots/'
+            field2D = np.load(directory_field_saved + file)
+            knot_full_dict = main_dots_building(
+                field2D=field2D,
+                plotting=True,
+                dz=12,
+                steps_both=20,
+                resolution_crop=(120, 120),
+                r_crop=40
+            )
+            print(knot_full_dict)
+            # df_dots_dotsFiltered = pd.DataFrame({
+            #     'dots_raw': dots_raw,
+            #     'dots_filtered': dots_filtered,
+            #     'radius': r_crop,
+            #     'z_min': 0,
+            #     'z_max': np.shape(field3D_cropped)[-1],
+            # })
+            # knot_full_df = pd.DataFrame.from_dict(knot_full_dict)
 
 # x=0, y=0, eta=6.0*, gamma=2.0*, var=0.08804003185287904  70 70

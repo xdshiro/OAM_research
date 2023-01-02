@@ -97,6 +97,7 @@ def filter_ZeroNeighbours(dots_dict):
     # removing dots which are definitely separated from other algorithms
     # and are definitely good and viable
     for dot in dots_problem:
+        print(dot)
         dots_dict.pop(dot)
     # for dot in new_dots:
     #     count, dots = neighboursDots(*dot, new_dots)
