@@ -4,8 +4,8 @@ This module includes different optical beam shapes
 import numpy as np
 from scipy.special import assoc_laguerre
 import my_functions.functions_general as fg
-
-
+import math
+np.seterr(divide='ignore', invalid='ignore')
 
 def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
     """
@@ -26,7 +26,8 @@ def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
     y = y - y0
     z = z - z0
     zR = k0 * width ** 2
-    E = (np.sqrt(np.math.factorial(p) / (np.pi * np.math.factorial(np.abs(l) + p)))
+
+    E = (np.sqrt(math.factorial(p) / (np.pi * math.factorial(np.abs(l) + p)))
          * fg.rho(x, y) ** np.abs(l) * np.exp(1j * l * fg.phi(x, y))
          / (width ** (np.abs(l) + 1) * (1 + 1j * z / zR) ** (np.abs(l) + 1))
          * ((1 - 1j * z / zR) / (1 + 1j * z / zR)) ** p

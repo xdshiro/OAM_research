@@ -317,27 +317,32 @@ def main_dots_building(
     # cropping dots, in a radius <= R
     x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
     dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
-                         np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop}
+                         np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) < r_crop}
     dp.plotDots(dots_cropped_dict, dots_cropped_dict, color='black', show=plotting, size=10)
+
 
     # moving dots to the corner to make 3D array smaller
     dots_moved_dict = {
         (dot[0] - (x0 - r_crop), dot[1] - (y0 - r_crop), dot[2]): 1 for dot in dots_cropped_dict}
-    dp.plotDots(dots_moved_dict, dots_cropped_dict, color='grey', show=plotting, size=12)
+    dp.plotDots(dots_moved_dict, dots_moved_dict, color='grey', show=plotting, size=12)
 
     # applying the dot simplification algorithm from dots_processing.py
     dots_filtered = dp.filtered_dots(dots_moved_dict)
-    dots_raw = np.array([dot for dot in dots_filtered])
     dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
+    dots_filtered_rounded = dots_rounded(dots_filtered, resolution_crop, z0=0)
+    dots_filtered_dict = {tuple(dot): 1 for dot in dots_filtered_rounded}
+    dots_filtered_twice = dp.filtered_dots(dots_filtered_dict, single_dot=True)
+    dp.plotDots(dots_filtered_twice, dots_filtered_twice, color='red', show=plotting, size=12)
+    # dots = np.array([dot for dot in dots_filtered_twice])
+    # return dots
+    dots_raw = dp.filtered_dots(dots_moved_dict, single_dot=True)
+    # dots_raw = [dot for dot in dots_moved_dict]
+    return dots_raw, dots_filtered_twice
     # saving dots into a data_frame. Both processed as well as unprocessed
     # also saving the frames of the 3D knot for both of the
-    return dots_raw
     ##########################################################
     print(dots_raw)
-    z0 = 0
-    dots_raw_centered = dots_raw - [x0, y0, z0]
-    print(dots_raw_centered)
-    dots_raw_rounded = dots_raw_centered.astype(int)
+
     print(dots_raw_rounded)
     dp.plotDots(dots_moved_dict, dots_moved_dict, color='black', show=True, size=12)
     dp.plotDots(dots_raw , dots_moved_dict, color='black', show=True, size=12)
@@ -401,7 +406,7 @@ def main_dots_building(
     }
 
 
-def dots_with_zeros(dots, radius, z_dim, resolution_crop, flag_crop=False):
+def dots_rounded(dots, resolution_crop, z0=0):
     """
 
     :param dots:
@@ -410,37 +415,10 @@ def dots_with_zeros(dots, radius, z_dim, resolution_crop, flag_crop=False):
     :return:
     """
     x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
-    x_array = np.arange(2 * radius + 1)
-    y_array = np.arange(2 * radius + 1)
-    z_array = np.arange(z_dim[0], z_dim[1])
-    x_res, y_res, z_res = len(x_array), len(y_array), len(z_array)
-    # answer = np.zeros(x_res * y_res * z_res)
-    answer = np.zeros((x_res, y_res, z_res))
-    # dots_cropped_dict = {dot: 1 for dot in dots_init_dict if
-    #                      np.sqrt((dot[0] - x0) ** 2 + (dot[1] - y0) ** 2) <= r_crop}
-    for dot in dots:
-        dot = list(map(round, dot))
-        dot[0] -= x0
-        dot[1] -= y0
-        i, j, k = dot
-        answer[i, j, k] = 1
-    if not flag_crop:
-        return np.array(answer)
-    else:
-        # not fully correct, resolutions were changed
-        indices_remove = []
-        for i in x_array:
-            for j in y_array:
-                if np.sqrt((i - x0) ** 2 + (j - y0) ** 2) <= radius:
-                    index_remove = [
-                        k * resolution_crop[0] * resolution_crop[1] +
-                        j * resolution_crop[0]
-                        + i for k in z_array
-                    ]
-                    indices_remove.append(index_remove)
-        indices_remove = np.array([index for indices in indices_remove for index in indices])
-        answer_final = np.delete(answer, indices_remove)
-        return answer_final
+    dots_centered = dots - [x0, y0, z0]
+    dots_rounded = dots_centered.astype(int)
+    return dots_rounded
+
 
 
 def files_list(mypath, end='.mat'):
@@ -450,13 +428,16 @@ def files_list(mypath, end='.mat'):
 if __name__ == '__main__':
     directory_field = f'data/test/'
     directory_field_saved = f'data/test/saved/'
+    directory_field_saved_dots = f'data/test/saved/dots/'
     if not os.path.isdir(directory_field_saved):
         os.makedirs(directory_field_saved)
+    if not os.path.isdir(directory_field_saved_dots):
+        os.makedirs(directory_field_saved_dots)
 
-    file_processing_ = False
+    file_processing_ = True
     if file_processing_:
 
-        files = files_list(directory_field)
+        files = files_list(directory_field, end='.mat')
         print(files)
         for file in files:
             print(file)
@@ -466,10 +447,10 @@ if __name__ == '__main__':
                 resolution_iterpol_center=(100, 100),
                 xMinMax_frac_center=(1, 1),
                 yMinMax_frac_center=(1, 1),
-                resolution_interpol_working=(200, 200),
+                resolution_interpol_working=(150, 150),
                 xMinMax_frac_working=(1.2, 1.2),
                 yMinMax_frac_working=(1.2, 1.2),
-                resolution_crop=(180, 180),
+                resolution_crop=(130, 130),
                 moments_init={'p': (0, 5), 'l': (-4, 4)},
                 moments_center={'p0': (0, 5), 'l0': (-4, 4)},
             )
@@ -478,29 +459,33 @@ if __name__ == '__main__':
             np.save(file_save, field2D)
 
     dots_building_ = True
+    resolution_crop = (80, 80)
     if dots_building_:
         files = files_list(directory_field_saved, end='.npy')
         print(files)
         for file in files:
             print(file)
-            directory_field_saved_dots = f'data/test/saved/dots/'
             field2D = np.load(directory_field_saved + file)
-            knot_full_dict = main_dots_building(
+            dots_raw, dots_filtered = main_dots_building(
                 field2D=field2D,
                 plotting=True,
-                dz=12,
-                steps_both=20,
-                resolution_crop=(120, 120),
-                r_crop=40
+                dz=5,
+                steps_both=30,
+                resolution_crop=resolution_crop,
+                r_crop=30
             )
-            print(knot_full_dict)
-            # df_dots_dotsFiltered = pd.DataFrame({
-            #     'dots_raw': dots_raw,
-            #     'dots_filtered': dots_filtered,
-            #     'radius': r_crop,
-            #     'z_min': 0,
-            #     'z_max': np.shape(field3D_cropped)[-1],
-            # })
-            # knot_full_df = pd.DataFrame.from_dict(knot_full_dict)
+            file_save_dots_raw = directory_field_saved_dots + 'raw_' + file[:-4] + '.npy'
+            file_save_dots_filtered = directory_field_saved_dots + 'filtered_' + file[:-4] + '.npy'
+            print(file_save_dots_raw)
+            np.save(file_save_dots_raw, dots_raw)
+            np.save(file_save_dots_filtered, dots_filtered)
 
+    # exit()
+    test_name = directory_field_saved_dots + 'raw_' + 'Efield_1_SR_9.500000e-01.npy'
+    dots = np.load(test_name)
+    dp.plotDots(dots, dots, color='green', show=True, size=15)
+    test_name = directory_field_saved_dots + 'filtered_' + 'Efield_1_SR_9.500000e-01.npy'
+    dots = np.load(test_name)
+    dp.plotDots(dots, dots, color='green', show=True, size=15)
+    # print(dots)
 # x=0, y=0, eta=6.0*, gamma=2.0*, var=0.08804003185287904  70 70

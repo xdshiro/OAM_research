@@ -97,7 +97,6 @@ def filter_ZeroNeighbours(dots_dict):
     # removing dots which are definitely separated from other algorithms
     # and are definitely good and viable
     for dot in dots_problem:
-        print(dot)
         dots_dict.pop(dot)
     # for dot in new_dots:
     #     count, dots = neighboursDots(*dot, new_dots)
@@ -442,7 +441,7 @@ def filter_PlaneTwoClusters_Vertical(dots_dict):
     pass
 
 
-def globalFilterDots(dots_dict):
+def globalFilterDots(dots_dict, single_dot=False, print_=False):
     """
     Applaying all the filters to the dictionary of dots
     :param dots_dict: dictionary with all the dots
@@ -451,29 +450,38 @@ def globalFilterDots(dots_dict):
     import copy
     dots_dict_copy = copy.deepcopy(dots_dict)
     dots_final = []
-    print('raw: ', len(dots_dict_copy))
+    if print_:
+        print('raw: ', len(dots_dict_copy))
+
     dots_final.append(filter_ZeroNeighbours(dots_dict_copy)[0])
-    print('0. zero neighbour: ', len(dots_dict_copy))
-    dots_final.append(filter_OneNeighbours(dots_dict_copy)[0])
-    print('1. one neighbour: ', len(dots_dict_copy))
-    dots_final.append(filter_TwoNeighbours(dots_dict_copy)[0])
-    print('2. two neighbours: ', len(dots_dict_copy))
-    dots_final.append(filter_ThreeNeighbours(dots_dict_copy)[0])
-    print('3. three neighbours: ', len(dots_dict_copy))
-    dots_final.append(filter_PlaneThreeClusters(dots_dict_copy)[0])
-    print('4. plane 3 dots: ', len(dots_dict_copy))
-    dots_final.append(filter_PlaneTwoClusters(dots_dict_copy)[0])
-    print('5. plane 2 dots (FINAL LENGTH): ', len(dots_dict_copy))
+    if print_:
+        print('0. zero neighbour: ', len(dots_dict_copy))
+    if not single_dot:
+        dots_final.append(filter_OneNeighbours(dots_dict_copy)[0])
+        if print_:
+            print('1. one neighbour: ', len(dots_dict_copy))
+        dots_final.append(filter_TwoNeighbours(dots_dict_copy)[0])
+        if print_:
+            print('2. two neighbours: ', len(dots_dict_copy))
+        dots_final.append(filter_ThreeNeighbours(dots_dict_copy)[0])
+        if print_:
+            print('3. three neighbours: ', len(dots_dict_copy))
+        dots_final.append(filter_PlaneThreeClusters(dots_dict_copy)[0])
+        if print_:
+            print('4. plane 3 dots: ', len(dots_dict_copy))
+        dots_final.append(filter_PlaneTwoClusters(dots_dict_copy)[0])
+        if print_:
+            print('5. plane 2 dots (FINAL LENGTH): ', len(dots_dict_copy))
     return dots_final, dots_dict_copy
 
 
-def filtered_dots(dots_dict):
+def filtered_dots(dots_dict, single_dot=False):
     """
     It's a wrapper for globalFilterDots()
     This function places all the filtered dots into 1 array. It checks, if the arrays are empty as well.
     :param dots_dict: dictionary with all the dots
     """
-    dots_final, dots_left = globalFilterDots(dots_dict)
+    dots_final, dots_left = globalFilterDots(dots_dict, single_dot=single_dot)
     dots_final_combined = []
     for dots_arrays in dots_final:
         if len(dots_arrays) != 0:
