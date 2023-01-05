@@ -55,7 +55,7 @@ def normalization_field(field):
     return field_norm
 
 
-def plot_field(field):
+def plot_field(field, save=None):
     """
     Function plots intensity and phase of the field in 1 plot.
     Just a small convenient wrapper
@@ -68,6 +68,8 @@ def plot_field(field):
     ax2.set_title('Phase(E)')
     plt.colorbar(image2, ax=ax2, shrink=0.4, pad=0.02, fraction=0.1)
     plt.tight_layout()
+    if save is not None:
+        fig.savefig(save, format='png')
     plt.show()
 
 
@@ -234,13 +236,13 @@ def main_field_processing(
     # finding the beam center
     ## moments_init.update(moments_center)
     ## moments = moments_init
-    # x, y, eta, gamma = cbs.beamFullCenter(
-    #     field_interpol, mesh_interpol,
-    #     stepXY=(1, 1), stepEG=(3 / 180 * np.pi, 0.25 / 180 * np.pi),
-    #     x=0, y=0, eta2=0., gamma=0.,
-    #     **moments_center, threshold=1, width=width, k0=1, print_info=plotting
-    # )
-    x, y, eta, gamma = 0, 0, 0, 0
+    x, y, eta, gamma = cbs.beamFullCenter(
+        field_interpol, mesh_interpol,
+        stepXY=(1, 1), stepEG=(3 / 180 * np.pi, 0.25 / 180 * np.pi),
+        x=0, y=0, eta2=0., gamma=0.,
+        **moments_center, threshold=1, width=width, k0=1, print_info=plotting
+    )
+    # x, y, eta, gamma = 0, 0, 0, 0
 
     # rescaling field to the scale we want for 3D calculations
     field_interpol2, mesh_interpol2 = field_interpolation(
@@ -329,7 +331,7 @@ def main_dots_building(
     # applying the dot simplification algorithm from dots_processing.py
     dots_filtered = dp.filtered_dots(dots_moved_dict)
     dp.plotDots(dots_filtered, dots_filtered, color='grey', show=plotting, size=12)
-    dots_filtered_rounded = dots_rounded(dots_filtered, resolution_crop, z0=0)
+    dots_filtered_rounded = dots_rounded(dots_filtered, resolution_crop, x0=0, y0=0, z0=0)
     dots_filtered_dict = {tuple(dot): 1 for dot in dots_filtered_rounded}
     dots_filtered_twice = dp.filtered_dots(dots_filtered_dict, single_dot=True)
     dp.plotDots(dots_filtered_twice, dots_filtered_twice, color='red', show=plotting, size=12)
@@ -406,7 +408,7 @@ def main_dots_building(
     }
 
 
-def dots_rounded(dots, resolution_crop, z0=0):
+def dots_rounded(dots, resolution_crop, x0=None, y0=None, z0=0):
     """
 
     :param dots:
@@ -414,7 +416,10 @@ def dots_rounded(dots, resolution_crop, z0=0):
     :param z_dim:
     :return:
     """
-    x0, y0 = resolution_crop[0] // 2, resolution_crop[1] // 2
+    if x0 is None:
+        x0 = resolution_crop[0] // 2
+    if y0 is None:
+        y0 = resolution_crop[1] // 2
     dots_centered = dots - [x0, y0, z0]
     dots_rounded = dots_centered.astype(int)
     return dots_rounded
@@ -429,10 +434,13 @@ if __name__ == '__main__':
     directory_field = f'data/test/'
     directory_field_saved = f'data/test/saved/'
     directory_field_saved_dots = f'data/test/saved/dots/'
+    directory_field_saved_plots = f'data/test/saved/plots/'
     if not os.path.isdir(directory_field_saved):
         os.makedirs(directory_field_saved)
     if not os.path.isdir(directory_field_saved_dots):
         os.makedirs(directory_field_saved_dots)
+    if not os.path.isdir(directory_field_saved_plots):
+        os.makedirs(directory_field_saved_plots)
 
     file_processing_ = True
     if file_processing_:
@@ -443,23 +451,24 @@ if __name__ == '__main__':
             print(file)
             field2D, _ = main_field_processing(
                 path=directory_field + file,
-                plotting=True,
+                plotting=False,
                 resolution_iterpol_center=(100, 100),
                 xMinMax_frac_center=(1, 1),
                 yMinMax_frac_center=(1, 1),
-                resolution_interpol_working=(150, 150),
+                resolution_interpol_working=(115, 115),
                 xMinMax_frac_working=(1.2, 1.2),
                 yMinMax_frac_working=(1.2, 1.2),
-                resolution_crop=(130, 130),
+                resolution_crop=(100, 100),
                 moments_init={'p': (0, 5), 'l': (-4, 4)},
                 moments_center={'p0': (0, 5), 'l0': (-4, 4)},
             )
             file_save = directory_field_saved + file[:-4] + '.npy'
             print(file_save)
             np.save(file_save, field2D)
+            plot_field(field2D, save=directory_field_saved_plots + file[:-4] + '.png')
 
     dots_building_ = True
-    resolution_crop = (80, 80)
+    resolution_crop = (70, 70)
     if dots_building_:
         files = files_list(directory_field_saved, end='.npy')
         print(files)
@@ -468,19 +477,20 @@ if __name__ == '__main__':
             field2D = np.load(directory_field_saved + file)
             dots_raw, dots_filtered = main_dots_building(
                 field2D=field2D,
-                plotting=True,
-                dz=5,
-                steps_both=30,
+                plotting=False,
+                dz=5.5,
+                steps_both=25,
                 resolution_crop=resolution_crop,
-                r_crop=30
+                r_crop=25
             )
             file_save_dots_raw = directory_field_saved_dots + 'raw_' + file[:-4] + '.npy'
             file_save_dots_filtered = directory_field_saved_dots + 'filtered_' + file[:-4] + '.npy'
-            print(file_save_dots_raw)
+            dp.plotDots(dots_raw, dots_raw, color='green', show=False, size=15,
+                        save=directory_field_saved_plots + file[:-4] + '_3D.html')
             np.save(file_save_dots_raw, dots_raw)
             np.save(file_save_dots_filtered, dots_filtered)
 
-    # exit()
+    exit()
     test_name = directory_field_saved_dots + 'raw_' + 'Efield_1_SR_9.500000e-01.npy'
     dots = np.load(test_name)
     dp.plotDots(dots, dots, color='green', show=True, size=15)

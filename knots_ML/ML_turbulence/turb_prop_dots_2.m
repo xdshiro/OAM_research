@@ -3,7 +3,7 @@ clearvars;
 N = 128;
 tic
 num = 100;
-num = 1;
+num = 10;
 
 % for w = 1.3:0.1:1.6
 for ii = 1:num
